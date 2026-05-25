@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import budgetrLogo from '../assets/budgetr-logo.svg';
 import { supabase } from '../lib/supabaseClient';
+import ThemeToggle from './ThemeToggle.jsx';
 
-export default function Login() {
+export default function Login({ theme, onThemeToggle }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -102,6 +103,10 @@ export default function Login() {
 
             {message && <p className="form-message">{message}</p>}
           </form>
+
+          <div className="login-theme-row">
+            <ThemeToggle theme={theme} onToggle={onThemeToggle} />
+          </div>
 
           <p className="signup-note">
             New to BudgetR? <a href="#create-account">Create an account</a>

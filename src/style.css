@@ -39,6 +39,32 @@ a:hover {
   color: #12443d;
 }
 
+.theme-toggle {
+  align-self: center;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d8cfbf;
+  border-radius: 999px;
+  padding: 0 8px 0 14px;
+  background: #fffaf2;
+  color: #173e37;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(25, 33, 46, 0.08);
+}
+
+.theme-toggle strong {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: #0f6b58;
+  color: #ffffff;
+  font-size: 0.78rem;
+}
+
 .login-page {
   min-height: 100vh;
   display: grid;
@@ -282,6 +308,12 @@ h2 {
   margin: 28px 0 0;
   color: #5b6372;
   line-height: 1.55;
+}
+
+.login-theme-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
 }
 
 .app-layout {
@@ -565,6 +597,108 @@ h2 {
   color: #173e37;
   font-weight: 750;
   cursor: pointer;
+}
+
+[data-theme="dark"] {
+  color: #edf3ef;
+  background: #0e151c;
+}
+
+[data-theme="dark"] body {
+  background: #0e151c;
+}
+
+[data-theme="dark"] a {
+  color: #7bd8c1;
+}
+
+[data-theme="dark"] a:hover {
+  color: #b4f0df;
+}
+
+[data-theme="dark"] .login-page,
+[data-theme="dark"] .app-layout {
+  background:
+    linear-gradient(115deg, rgba(231, 180, 95, 0.08), rgba(255, 255, 255, 0) 42%),
+    #0e151c;
+}
+
+[data-theme="dark"] .brand-panel,
+[data-theme="dark"] .app-sidebar {
+  background:
+    linear-gradient(145deg, rgba(13, 49, 43, 0.96), rgba(9, 14, 21, 0.98)),
+    #0b1717;
+}
+
+[data-theme="dark"] h2,
+[data-theme="dark"] .month-card,
+[data-theme="dark"] .quick-add-panel input,
+[data-theme="dark"] .login-form input[type="email"],
+[data-theme="dark"] .login-form input[type="password"],
+[data-theme="dark"] .login-form input[type="text"] {
+  color: #edf3ef;
+}
+
+[data-theme="dark"] .login-card,
+[data-theme="dark"] .metric-tile,
+[data-theme="dark"] .chart-panel,
+[data-theme="dark"] .table-panel,
+[data-theme="dark"] .quick-add-panel,
+[data-theme="dark"] .month-card {
+  border-color: #2b3942;
+  background: rgba(22, 31, 39, 0.94);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .login-form label,
+[data-theme="dark"] .field-topline label,
+[data-theme="dark"] .quick-add-panel label {
+  color: #edf3ef;
+}
+
+[data-theme="dark"] .login-form input[type="email"],
+[data-theme="dark"] .login-form input[type="password"],
+[data-theme="dark"] .login-form input[type="text"],
+[data-theme="dark"] .quick-add-panel input {
+  border-color: #384852;
+  background: #101922;
+}
+
+[data-theme="dark"] .login-form input:focus,
+[data-theme="dark"] .quick-add-panel input:focus {
+  border-color: #7bd8c1;
+  background: #121f29;
+  box-shadow: 0 0 0 4px rgba(123, 216, 193, 0.16);
+}
+
+[data-theme="dark"] .check-row,
+[data-theme="dark"] .signup-note,
+[data-theme="dark"] .metric-tile span,
+[data-theme="dark"] .panel-title span,
+[data-theme="dark"] .category-row span,
+[data-theme="dark"] .transaction-row span,
+[data-theme="dark"] .month-card small {
+  color: #a9b7c2;
+}
+
+[data-theme="dark"] .category-row,
+[data-theme="dark"] .transaction-row {
+  border-bottom-color: #2b3942;
+}
+
+[data-theme="dark"] .theme-toggle,
+[data-theme="dark"] .quick-add-panel .panel-title button,
+[data-theme="dark"] .suggestion-row button {
+  border-color: #384852;
+  background: #101922;
+  color: #edf3ef;
+}
+
+[data-theme="dark"] .status-pill,
+[data-theme="dark"] .app-nav button.active,
+[data-theme="dark"] .app-nav button:hover,
+[data-theme="dark"] .sign-out-button:hover {
+  color: #101922;
 }
 
 @media (max-width: 900px) {

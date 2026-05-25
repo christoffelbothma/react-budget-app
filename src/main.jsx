@@ -10,6 +10,7 @@ import './style.css';
 function App() {
   const [session, setSession] = useState(null);
   const [activeView, setActiveView] = useState('dashboard');
+  const [theme, setTheme] = useState(() => localStorage.getItem('budgetr-theme') || 'light');
   const [transactions, setTransactions] = useState([
     { id: 1, name: 'Rent', category: 'Housing', amount: 8500, date: '2026-05-01' },
     { id: 2, name: 'Groceries', category: 'Food', amount: 3150, date: '2026-05-05' },
@@ -17,6 +18,11 @@ function App() {
     { id: 4, name: 'Internet', category: 'Utilities', amount: 899, date: '2026-05-12' },
     { id: 5, name: 'Coffee', category: 'Lifestyle', amount: 420, date: '2026-05-18' },
   ]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('budgetr-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -57,8 +63,12 @@ function App() {
     await supabase.auth.signOut();
   }
 
+  function handleThemeToggle() {
+    setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
+  }
+
   if (!session) {
-    return <Login />;
+    return <Login theme={theme} onThemeToggle={handleThemeToggle} />;
   }
 
   return (
