@@ -57,7 +57,6 @@ export default function Dashboard({ transactions }) {
         <article className="chart-panel">
           <div className="panel-title">
             <h3>Weekly spend</h3>
-            <span>Dummy data</span>
           </div>
           <div className="bar-chart" aria-label="Weekly spending chart">
             {weeklySpend.map((value, index) => (

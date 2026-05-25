@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import Dashboard from './sections/Dashboard.jsx';
 import Login from './sections/Login.jsx';
 import MonthCalendar from './sections/MonthCalendar.jsx';
+import Products from './sections/Products.jsx';
 import QuickAdd from './sections/QuickAdd.jsx';
 import { supabase } from './lib/supabaseClient';
 import './style.css';
@@ -93,6 +94,13 @@ function App() {
           >
             Months
           </button>
+          <button
+            type="button"
+            className={activeView === 'products' ? 'active' : ''}
+            onClick={() => setActiveView('products')}
+          >
+            Products
+          </button>
         </nav>
         <button className="sign-out-button" type="button" onClick={handleSignOut}>
           Sign out
@@ -100,11 +108,9 @@ function App() {
       </aside>
 
       <section className="workspace">
-        {activeView === 'dashboard' ? (
-          <Dashboard transactions={transactions} />
-        ) : (
-          <MonthCalendar transactions={transactions} />
-        )}
+        {activeView === 'dashboard' && <Dashboard transactions={transactions} />}
+        {activeView === 'months' && <MonthCalendar transactions={transactions} />}
+        {activeView === 'products' && <Products transactions={transactions} />}
       </section>
 
       <QuickAdd onSave={handleAddTransaction} />
