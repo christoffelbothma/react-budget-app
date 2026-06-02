@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import budgetrLogo from '../assets/budgetr-logo.svg';
 import { supabase } from '../lib/supabaseClient';
+import { APP_VERSION } from '../version';
 import ThemeToggle from './ThemeToggle.jsx';
 
 export default function Login({ theme, onShowRegister, onThemeToggle }) {
@@ -114,6 +115,7 @@ export default function Login({ theme, onShowRegister, onThemeToggle }) {
               Create an account
             </button>
           </p>
+          <p className="version-note">v{APP_VERSION}</p>
         </div>
       </section>
     </main>

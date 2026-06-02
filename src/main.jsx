@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Menu, X } from 'lucide-react';
+import DebitOrders from './sections/DebitOrders.jsx';
 import Dashboard from './sections/Dashboard.jsx';
 import Login from './sections/Login.jsx';
 import MonthCalendar from './sections/MonthCalendar.jsx';
@@ -18,8 +19,10 @@ function App() {
   const [authView, setAuthView] = useState('login');
   const [theme, setTheme] = useState(() => localStorage.getItem('budgetr-theme') || 'light');
   const [transactions, setTransactions] = useState([]);
+  const [debitOrders, setDebitOrders] = useState([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [trackingError, setTrackingError] = useState('');
+  const [isDebitOrderStorageReady, setIsDebitOrderStorageReady] = useState(true);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -53,8 +56,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    async function loadTransactions() {
+    async function loadTrackingData() {
       if (!session?.user?.id) {
+        setDebitOrders([]);
         setTransactions([]);
         return;
       }
@@ -62,23 +66,57 @@ function App() {
       setIsLoadingTransactions(true);
       setTrackingError('');
 
-      const { data, error } = await supabase
+      let transactionResponse = await supabase
         .from('transactions')
-        .select('id, name, amount, transaction_date, categories(name)')
+        .select('id, name, category, amount, transaction_date, tags, categories(name)')
         .eq('user_id', session.user.id)
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (error) {
-        setTrackingError(error.message);
+      if (transactionResponse.error) {
+        transactionResponse = await supabase
+          .from('transactions')
+          .select('id, name, amount, transaction_date, categories(name)')
+          .eq('user_id', session.user.id)
+          .order('transaction_date', { ascending: false })
+          .order('created_at', { ascending: false });
+      }
+
+      const debitOrderResponse = await supabase
+        .from('debit_orders')
+        .select('id, name, category, tags, amount, day_of_month, auto_add_monthly')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+
+      if (transactionResponse.error) {
+        setTrackingError(transactionResponse.error.message);
       } else {
         setTransactions(
-          data.map((transaction) => ({
+          transactionResponse.data.map((transaction) => ({
             amount: Number(transaction.amount),
-            category: transaction.categories?.name || 'General',
+            category: transaction.category || transaction.categories?.name || 'General',
             date: transaction.transaction_date,
             id: transaction.id,
             name: transaction.name,
+            tags: transaction.tags || [],
+          })),
+        );
+      }
+
+      if (debitOrderResponse.error) {
+        setDebitOrders([]);
+        setIsDebitOrderStorageReady(false);
+      } else {
+        setIsDebitOrderStorageReady(true);
+        setDebitOrders(
+          debitOrderResponse.data.map((debitOrder) => ({
+            amount: Number(debitOrder.amount),
+            autoAddMonthly: debitOrder.auto_add_monthly,
+            category: debitOrder.category,
+            dayOfMonth: debitOrder.day_of_month,
+            id: debitOrder.id,
+            name: debitOrder.name,
+            tags: debitOrder.tags || [],
           })),
         );
       }
@@ -86,31 +124,73 @@ function App() {
       setIsLoadingTransactions(false);
     }
 
-    loadTransactions();
+    loadTrackingData();
   }, [session]);
+
+  useEffect(() => {
+    async function autoAddDebitOrders() {
+      if (!session?.user?.id || debitOrders.length === 0) {
+        return;
+      }
+
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const existingNames = new Set(
+        transactions
+          .filter((transaction) => transaction.date?.startsWith(currentMonth))
+          .map((transaction) => transaction.name),
+      );
+      const pendingDebitOrders = debitOrders.filter(
+        (debitOrder) => debitOrder.autoAddMonthly && !existingNames.has(debitOrder.name),
+      );
+
+      for (const debitOrder of pendingDebitOrders) {
+        await handleAddTransaction({
+          amount: debitOrder.amount,
+          category: debitOrder.category,
+          name: debitOrder.name,
+          tags: debitOrder.tags,
+        });
+      }
+    }
+
+    autoAddDebitOrders();
+  }, [debitOrders, session]);
 
   async function handleAddTransaction(transaction) {
     if (session?.user?.id) {
-      const { data, error } = await supabase.from('transactions').insert({
+      let response = await supabase.from('transactions').insert({
         amount: transaction.amount,
+        category: transaction.category || 'General',
+        category_id: transaction.categoryId || null,
         name: transaction.name,
+        tags: transaction.tags || [],
         transaction_date: new Date().toISOString().slice(0, 10),
         user_id: session.user.id,
-      }).select('id, name, amount, transaction_date, categories(name)').single();
+      }).select('id, name, category, amount, transaction_date, tags, categories(name)').single();
 
-      if (error) {
-        setTrackingError(error.message);
+      if (response.error) {
+        response = await supabase.from('transactions').insert({
+          amount: transaction.amount,
+          name: transaction.name,
+          transaction_date: new Date().toISOString().slice(0, 10),
+          user_id: session.user.id,
+        }).select('id, name, amount, transaction_date, categories(name)').single();
+      }
+
+      if (response.error) {
+        setTrackingError(response.error.message);
         return;
       }
 
       setTrackingError('');
       setTransactions((currentTransactions) => [
         {
-          amount: Number(data.amount),
-          category: data.categories?.name || 'General',
-          date: data.transaction_date,
-          id: data.id,
-          name: data.name,
+          amount: Number(response.data.amount),
+          category: response.data.category || response.data.categories?.name || transaction.category || 'General',
+          date: response.data.transaction_date,
+          id: response.data.id,
+          name: response.data.name,
+          tags: response.data.tags || transaction.tags || [],
         },
         ...currentTransactions,
       ]);
@@ -120,6 +200,59 @@ function App() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+  }
+
+  async function handleAddDebitOrder(debitOrder) {
+    if (!session?.user?.id) {
+      return;
+    }
+
+    if (!isDebitOrderStorageReady) {
+      setDebitOrders((currentDebitOrders) => [
+        {
+          ...debitOrder,
+          id: crypto.randomUUID(),
+        },
+        ...currentDebitOrders,
+      ]);
+      return;
+    }
+
+    const { data, error } = await supabase.from('debit_orders').insert({
+      amount: debitOrder.amount,
+      auto_add_monthly: debitOrder.autoAddMonthly,
+      category: debitOrder.category,
+      day_of_month: debitOrder.dayOfMonth,
+      name: debitOrder.name,
+      tags: debitOrder.tags || [],
+      user_id: session.user.id,
+    }).select('id, name, category, tags, amount, day_of_month, auto_add_monthly').single();
+
+    if (error) {
+      setIsDebitOrderStorageReady(false);
+      setDebitOrders((currentDebitOrders) => [
+        {
+          ...debitOrder,
+          id: crypto.randomUUID(),
+        },
+        ...currentDebitOrders,
+      ]);
+      return;
+    }
+
+    setTrackingError('');
+    setDebitOrders((currentDebitOrders) => [
+      {
+        amount: Number(data.amount),
+        autoAddMonthly: data.auto_add_monthly,
+        category: data.category,
+        dayOfMonth: data.day_of_month,
+        id: data.id,
+        name: data.name,
+        tags: data.tags || [],
+      },
+      ...currentDebitOrders,
+    ]);
   }
 
   function handleThemeToggle() {
@@ -206,6 +339,13 @@ function App() {
           >
             Products
           </button>
+          <button
+            type="button"
+            className={activeView === 'debit-orders' ? 'active' : ''}
+            onClick={() => handleNavChange('debit-orders')}
+          >
+            Debit orders
+          </button>
         </nav>
         <button className="sign-out-button" type="button" onClick={handleSignOut}>
           Sign out
@@ -219,6 +359,13 @@ function App() {
         )}
         {activeView === 'months' && <MonthCalendar transactions={transactions} />}
         {activeView === 'products' && <Products transactions={transactions} />}
+        {activeView === 'debit-orders' && (
+          <DebitOrders
+            debitOrders={debitOrders}
+            isStorageReady={isDebitOrderStorageReady}
+            onSave={handleAddDebitOrder}
+          />
+        )}
       </section>
 
       <QuickAdd onSave={handleAddTransaction} />

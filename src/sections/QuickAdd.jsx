@@ -1,15 +1,19 @@
 import { useState } from 'react';
+import { findProduct, productCatalog } from '../lib/productCatalog';
 
-const suggestions = ['Rent', 'Groceries', 'Fuel', 'Internet', 'Electricity', 'Coffee'];
+const allTags = [...new Set(productCatalog.flatMap((product) => product.tags))].sort();
 
 export default function QuickAdd({ onSave }) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
 
-  const filteredSuggestions = suggestions.filter((suggestion) =>
-    suggestion.toLowerCase().includes(name.toLowerCase()),
+  const filteredProducts = productCatalog.filter((product) =>
+    product.name.toLowerCase().includes(name.toLowerCase()),
   );
+  const selectedProduct = name ? findProduct(name) : null;
+  const visibleTags = selectedProduct ? selectedProduct.tags : allTags.slice(0, 10);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -20,11 +24,27 @@ export default function QuickAdd({ onSave }) {
 
     onSave({
       amount: Number(amount),
+      category: selectedProduct?.category || 'General',
       name,
+      tags: selectedTags,
     });
     setName('');
     setAmount('');
+    setSelectedTags([]);
     setIsOpen(false);
+  }
+
+  function handleProductSelect(product) {
+    setName(product.name);
+    setSelectedTags(product.tags);
+  }
+
+  function handleTagToggle(tag) {
+    setSelectedTags((currentTags) =>
+      currentTags.includes(tag)
+        ? currentTags.filter((currentTag) => currentTag !== tag)
+        : [...currentTags, tag],
+    );
   }
 
   return (
@@ -47,15 +67,29 @@ export default function QuickAdd({ onSave }) {
             autoComplete="off"
           />
 
-          {name && filteredSuggestions.length > 0 && (
+          {filteredProducts.length > 0 && (
             <div className="suggestion-row">
-              {filteredSuggestions.map((suggestion) => (
-                <button key={suggestion} type="button" onClick={() => setName(suggestion)}>
-                  {suggestion}
+              {filteredProducts.slice(0, 8).map((product) => (
+                <button key={product.name} type="button" onClick={() => handleProductSelect(product)}>
+                  {product.name}
                 </button>
               ))}
             </div>
           )}
+
+          <label>Tags</label>
+          <div className="tag-row">
+            {visibleTags.map((tag) => (
+              <button
+                className={selectedTags.includes(tag) ? 'selected' : ''}
+                key={tag}
+                type="button"
+                onClick={() => handleTagToggle(tag)}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
 
           <label htmlFor="quick-amount">Amount</label>
           <input

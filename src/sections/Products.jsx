@@ -1,12 +1,37 @@
 import { useMemo, useState } from 'react';
-import { Coffee, Fuel, Home, ReceiptText, ShoppingBasket, Wifi, X } from 'lucide-react';
+import {
+  Coffee,
+  Dumbbell,
+  Fuel,
+  GraduationCap,
+  HeartPulse,
+  Home,
+  PiggyBank,
+  ReceiptText,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingBasket,
+  Tv,
+  Wifi,
+  X,
+  Zap,
+} from 'lucide-react';
 
 const productIcons = {
+  Clothing: ShoppingBag,
   Coffee,
+  Electricity: Zap,
+  'Emergency fund': PiggyBank,
   Fuel,
+  Gym: Dumbbell,
   Groceries: ShoppingBasket,
+  Insurance: ShieldCheck,
   Internet: Wifi,
+  'Medical aid': HeartPulse,
   Rent: Home,
+  Savings: PiggyBank,
+  'School fees': GraduationCap,
+  Subscriptions: Tv,
 };
 
 function formatCurrency(value) {

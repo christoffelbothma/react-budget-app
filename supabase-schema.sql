@@ -29,9 +29,28 @@ create table if not exists public.transactions (
   user_id uuid not null references auth.users(id) on delete cascade,
   budget_month_id uuid references public.budget_months(id) on delete set null,
   category_id uuid references public.categories(id) on delete set null,
+  category text not null default 'General',
   name text not null,
+  tags text[] not null default '{}',
   amount numeric(12, 2) not null check (amount >= 0),
   transaction_date date not null default current_date,
+  created_at timestamptz not null default now()
+);
+
+alter table public.transactions add column if not exists tags text[] not null default '{}';
+alter table public.transactions add column if not exists category text not null default 'General';
+
+create table if not exists public.debit_orders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  category_id uuid references public.categories(id) on delete set null,
+  name text not null,
+  category text not null default 'General',
+  tags text[] not null default '{}',
+  amount numeric(12, 2) not null check (amount >= 0),
+  day_of_month integer not null check (day_of_month between 1 and 31),
+  auto_add_monthly boolean not null default false,
+  last_auto_added_month date,
   created_at timestamptz not null default now()
 );
 
@@ -39,6 +58,7 @@ alter table public.profiles enable row level security;
 alter table public.budget_months enable row level security;
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
+alter table public.debit_orders enable row level security;
 
 drop policy if exists "Users can read their profile" on public.profiles;
 create policy "Users can read their profile"
@@ -69,6 +89,12 @@ on public.transactions for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+drop policy if exists "Users can manage their debit orders" on public.debit_orders;
+create policy "Users can manage their debit orders"
+on public.debit_orders for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -86,6 +112,11 @@ begin
     (new.id, 'Transport', '#365f91'),
     (new.id, 'Utilities', '#7d5a50'),
     (new.id, 'Lifestyle', '#9b3d27'),
+    (new.id, 'Financial', '#365f91'),
+    (new.id, 'Health', '#8b5cf6'),
+    (new.id, 'Education', '#2563eb'),
+    (new.id, 'Shopping', '#d97706'),
+    (new.id, 'Savings', '#16a34a'),
     (new.id, 'General', '#697284')
   on conflict (user_id, name) do nothing;
 

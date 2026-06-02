@@ -322,6 +322,13 @@ h2 {
   line-height: 1.55;
 }
 
+.version-note {
+  margin: 16px 0 0;
+  color: #8b9384;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 .verification-panel {
   display: grid;
   gap: 14px;
@@ -689,7 +696,8 @@ h2 {
   gap: 8px;
 }
 
-.suggestion-row button {
+.suggestion-row button,
+.tag-row button {
   min-height: 32px;
   border-radius: 999px;
   padding: 0 12px;
@@ -697,6 +705,80 @@ h2 {
   color: #173e37;
   font-weight: 750;
   cursor: pointer;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-row button.selected {
+  background: #0f6b58;
+  color: #ffffff;
+}
+
+.debit-screen {
+  display: grid;
+  gap: 24px;
+}
+
+.debit-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+.debit-form {
+  display: grid;
+  gap: 12px;
+  align-self: start;
+}
+
+.debit-form label {
+  color: #263143;
+  font-weight: 850;
+}
+
+.debit-form input {
+  min-height: 48px;
+  border: 1px solid #cfc7b8;
+  border-radius: 8px;
+  background: #fffaf2;
+  color: #172033;
+  padding: 0 14px;
+}
+
+.debit-category-list {
+  display: grid;
+  gap: 18px;
+}
+
+.debit-category {
+  display: grid;
+  gap: 10px;
+}
+
+.debit-order-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e7dfd1;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.debit-order-row span,
+.debit-order-row small {
+  display: block;
+  margin-top: 4px;
+  color: #697284;
+}
+
+.debit-order-row p {
+  margin: 0;
+  font-weight: 900;
+  text-align: right;
 }
 
 .product-grid {
@@ -973,6 +1055,7 @@ h2 {
 
 [data-theme="dark"] .check-row,
 [data-theme="dark"] .signup-note,
+[data-theme="dark"] .version-note,
 [data-theme="dark"] .metric-tile span,
 [data-theme="dark"] .panel-title span,
 [data-theme="dark"] .category-row span,
@@ -980,7 +1063,9 @@ h2 {
 [data-theme="dark"] .month-card small,
 [data-theme="dark"] .product-card-copy small,
 [data-theme="dark"] .product-card-copy span,
-[data-theme="dark"] .modal-entry span {
+[data-theme="dark"] .modal-entry span,
+[data-theme="dark"] .debit-order-row span,
+[data-theme="dark"] .debit-order-row small {
   color: #a9b7c2;
 }
 
@@ -992,10 +1077,16 @@ h2 {
 [data-theme="dark"] .theme-toggle,
 [data-theme="dark"] .menu-toggle,
 [data-theme="dark"] .quick-add-panel .panel-title button,
-[data-theme="dark"] .suggestion-row button {
+[data-theme="dark"] .suggestion-row button,
+[data-theme="dark"] .tag-row button {
   border-color: #384852;
   background: #101922;
   color: #edf3ef;
+}
+
+[data-theme="dark"] .tag-row button.selected {
+  background: #7bd8c1;
+  color: #101922;
 }
 
 [data-theme="dark"] .status-pill,
@@ -1015,8 +1106,19 @@ h2 {
 }
 
 [data-theme="dark"] .modal-close,
-[data-theme="dark"] .modal-entry {
+[data-theme="dark"] .modal-entry,
+[data-theme="dark"] .debit-order-row {
   border-color: #2b3942;
+  background: #101922;
+  color: #edf3ef;
+}
+
+[data-theme="dark"] .debit-form label {
+  color: #edf3ef;
+}
+
+[data-theme="dark"] .debit-form input {
+  border-color: #384852;
   background: #101922;
   color: #edf3ef;
 }
@@ -1099,7 +1201,8 @@ h2 {
   }
 
   .month-grid,
-  .product-grid {
+  .product-grid,
+  .debit-grid {
     width: 100%;
     grid-template-columns: 1fr;
   }
@@ -1162,7 +1265,8 @@ h2 {
   .panel-title,
   .category-row,
   .transaction-row,
-  .modal-entry {
+  .modal-entry,
+  .debit-order-row {
     align-items: flex-start;
     flex-direction: column;
   }

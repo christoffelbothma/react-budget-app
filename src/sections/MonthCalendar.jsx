@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 const months = [
   'January',
   'February',
@@ -24,6 +26,31 @@ function formatCurrency(value) {
 export default function MonthCalendar({ transactions }) {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const selectedTransactions = useMemo(
+    () =>
+      transactions.filter((transaction) => {
+        const transactionDate = new Date(transaction.date);
+        return transactionDate.getMonth() === selectedMonth && transactionDate.getFullYear() === currentYear;
+      }),
+    [currentYear, selectedMonth, transactions],
+  );
+  const selectedSummary = useMemo(() => {
+    const grouped = selectedTransactions.reduce((items, transaction) => {
+      if (!items[transaction.name]) {
+        items[transaction.name] = {
+          category: transaction.category || 'General',
+          name: transaction.name,
+          total: 0,
+        };
+      }
+
+      items[transaction.name].total += Number(transaction.amount);
+      return items;
+    }, {});
+
+    return Object.values(grouped).sort((a, b) => b.total - a.total);
+  }, [selectedTransactions]);
 
   return (
     <div className="month-screen">
@@ -46,8 +73,9 @@ export default function MonthCalendar({ transactions }) {
 
           return (
             <button
-              className={`month-card ${index === currentMonth ? 'selected' : ''}`}
+              className={`month-card ${index === selectedMonth ? 'selected' : ''}`}
               key={month}
+              onClick={() => setSelectedMonth(index)}
               type="button"
             >
               <span>{month.slice(0, 3)}</span>
@@ -56,6 +84,31 @@ export default function MonthCalendar({ transactions }) {
             </button>
           );
         })}
+      </section>
+
+      <section className="table-panel">
+        <div className="panel-title">
+          <h3>{months[selectedMonth]} summary</h3>
+          <span>{selectedTransactions.length} entries</span>
+        </div>
+        <div className="transaction-list">
+          {selectedSummary.length ? (
+            selectedSummary.map((item) => (
+              <div className="transaction-row" key={item.name}>
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>{item.category}</span>
+                </div>
+                <p>{formatCurrency(item.total)}</p>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              <strong>No spend captured</strong>
+              <p>This month will show a sorted summary once you add items.</p>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );
