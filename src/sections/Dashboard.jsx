@@ -20,20 +20,27 @@ function groupByCategory(transactions) {
   }, {});
 }
 
-export default function Dashboard({ transactions }) {
+export default function Dashboard({ isLoading, transactions }) {
   const spent = sumTransactions(transactions);
   const remaining = monthlyBudget - spent;
   const spentPercent = Math.min(Math.round((spent / monthlyBudget) * 100), 100);
   const categoryTotals = Object.entries(groupByCategory(transactions)).sort((a, b) => b[1] - a[1]);
-  const weeklySpend = [2800, 4300, 2100, 3600, Math.max(spent - 12800, 900)];
-  const maxWeeklySpend = Math.max(...weeklySpend);
+  const weeklySpend = transactions.length
+    ? [0, 0, 0, 0, 0].map((_, index) =>
+        transactions
+          .filter((transaction) => Math.min(new Date(transaction.date).getDate() - 1, 27) / 7 >= index)
+          .filter((transaction) => Math.min(new Date(transaction.date).getDate() - 1, 27) / 7 < index + 1)
+          .reduce((total, transaction) => total + Number(transaction.amount), 0),
+      )
+    : [0, 0, 0, 0, 0];
+  const maxWeeklySpend = Math.max(...weeklySpend, 1);
 
   return (
     <div className="dashboard-screen">
       <header className="screen-header">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h2>Your May spending</h2>
+          <h2>Your spending</h2>
         </div>
         <span className="status-pill">{spentPercent}% used</span>
       </header>
@@ -58,14 +65,18 @@ export default function Dashboard({ transactions }) {
           <div className="panel-title">
             <h3>Weekly spend</h3>
           </div>
-          <div className="bar-chart" aria-label="Weekly spending chart">
-            {weeklySpend.map((value, index) => (
-              <div className="bar-column" key={value + index}>
-                <span style={{ height: `${Math.max((value / maxWeeklySpend) * 100, 14)}%` }} />
-                <small>W{index + 1}</small>
-              </div>
-            ))}
-          </div>
+          {transactions.length ? (
+            <div className="bar-chart" aria-label="Weekly spending chart">
+              {weeklySpend.map((value, index) => (
+                <div className="bar-column" key={value + index}>
+                  <span style={{ height: `${Math.max((value / maxWeeklySpend) * 100, 14)}%` }} />
+                  <small>W{index + 1}</small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState message={isLoading ? 'Loading your tracking...' : 'No spend captured yet.'} />
+          )}
         </article>
 
         <article className="chart-panel">
@@ -74,15 +85,19 @@ export default function Dashboard({ transactions }) {
             <span>{transactions.length} entries</span>
           </div>
           <div className="category-list">
-            {categoryTotals.map(([category, total]) => (
-              <div className="category-row" key={category}>
-                <div>
-                  <strong>{category}</strong>
-                  <span>{Math.round((total / spent) * 100)}% of spend</span>
+            {categoryTotals.length ? (
+              categoryTotals.map(([category, total]) => (
+                <div className="category-row" key={category}>
+                  <div>
+                    <strong>{category}</strong>
+                    <span>{Math.round((total / spent) * 100)}% of spend</span>
+                  </div>
+                  <p>{formatCurrency(total)}</p>
                 </div>
-                <p>{formatCurrency(total)}</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              <EmptyState message="Categories will appear once you add spending." />
+            )}
           </div>
         </article>
       </section>
@@ -93,17 +108,30 @@ export default function Dashboard({ transactions }) {
           <span>Latest first</span>
         </div>
         <div className="transaction-list">
-          {transactions.map((transaction) => (
-            <div className="transaction-row" key={transaction.id}>
-              <div>
-                <strong>{transaction.name}</strong>
-                <span>{transaction.category}</span>
+          {transactions.length ? (
+            transactions.map((transaction) => (
+              <div className="transaction-row" key={transaction.id}>
+                <div>
+                  <strong>{transaction.name}</strong>
+                  <span>{transaction.category}</span>
+                </div>
+                <p>{formatCurrency(Number(transaction.amount))}</p>
               </div>
-              <p>{formatCurrency(Number(transaction.amount))}</p>
-            </div>
-          ))}
+            ))
+          ) : (
+            <EmptyState message="Use the + button to add your first item." />
+          )}
         </div>
       </section>
+    </div>
+  );
+}
+
+function EmptyState({ message }) {
+  return (
+    <div className="empty-state">
+      <strong>Nothing here yet</strong>
+      <p>{message}</p>
     </div>
   );
 }

@@ -23,6 +23,7 @@ function formatCurrency(value) {
 
 export default function MonthCalendar({ transactions }) {
   const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
 
   return (
     <div className="month-screen">
@@ -31,15 +32,17 @@ export default function MonthCalendar({ transactions }) {
           <p className="eyebrow">Year calendar</p>
           <h2>Select a month</h2>
         </div>
-        <span className="status-pill">2026</span>
+        <span className="status-pill">{currentYear}</span>
       </header>
 
       <section className="month-grid" aria-label="Months in 2026">
         {months.map((month, index) => {
-          const monthSpend =
-            index === currentMonth
-              ? transactions.reduce((total, transaction) => total + Number(transaction.amount), 0)
-              : 0;
+          const monthSpend = transactions
+            .filter((transaction) => {
+              const transactionDate = new Date(transaction.date);
+              return transactionDate.getMonth() === index && transactionDate.getFullYear() === currentYear;
+            })
+            .reduce((total, transaction) => total + Number(transaction.amount), 0);
 
           return (
             <button

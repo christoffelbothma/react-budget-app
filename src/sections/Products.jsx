@@ -61,34 +61,43 @@ export default function Products({ transactions }) {
         <span className="status-pill">{products.length} tracked</span>
       </header>
 
-      <section className="product-grid" aria-label="Spending by product">
-        {products.map((product) => {
-          const Icon = productIcons[product.name] || ReceiptText;
-          const width = Math.max((product.total / largestTotal) * 100, 8);
+      {products.length ? (
+        <section className="product-grid" aria-label="Spending by product">
+          {products.map((product) => {
+            const Icon = productIcons[product.name] || ReceiptText;
+            const width = Math.max((product.total / largestTotal) * 100, 8);
 
-          return (
-            <button
-              className="product-card"
-              key={product.name}
-              type="button"
-              onClick={() => setSelectedProduct(product)}
-            >
-              <span className="product-icon" aria-hidden="true">
-                <Icon size={24} strokeWidth={2.4} />
-              </span>
-              <div className="product-card-copy">
-                <small>{product.category}</small>
-                <strong>{product.name}</strong>
-                <span>{product.entries.length} captured</span>
-              </div>
-              <p>{formatCurrency(product.total)}</p>
-              <div className="product-meter" aria-hidden="true">
-                <span style={{ width: `${width}%` }} />
-              </div>
-            </button>
-          );
-        })}
-      </section>
+            return (
+              <button
+                className="product-card"
+                key={product.name}
+                type="button"
+                onClick={() => setSelectedProduct(product)}
+              >
+                <span className="product-icon" aria-hidden="true">
+                  <Icon size={24} strokeWidth={2.4} />
+                </span>
+                <div className="product-card-copy">
+                  <small>{product.category}</small>
+                  <strong>{product.name}</strong>
+                  <span>{product.entries.length} captured</span>
+                </div>
+                <p>{formatCurrency(product.total)}</p>
+                <div className="product-meter" aria-hidden="true">
+                  <span style={{ width: `${width}%` }} />
+                </div>
+              </button>
+            );
+          })}
+        </section>
+      ) : (
+        <div className="table-panel">
+          <div className="empty-state">
+            <strong>No products tracked yet</strong>
+            <p>Use the + button to capture your first spend item.</p>
+          </div>
+        </div>
+      )}
 
       {selectedProduct && (
         <div

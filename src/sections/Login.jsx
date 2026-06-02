@@ -3,7 +3,7 @@ import budgetrLogo from '../assets/budgetr-logo.svg';
 import { supabase } from '../lib/supabaseClient';
 import ThemeToggle from './ThemeToggle.jsx';
 
-export default function Login({ theme, onThemeToggle }) {
+export default function Login({ theme, onShowRegister, onThemeToggle }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -109,7 +109,10 @@ export default function Login({ theme, onThemeToggle }) {
           </div>
 
           <p className="signup-note">
-            New to BudgetR? <a href="#create-account">Create an account</a>
+            New to BudgetR?{' '}
+            <button className="text-action" type="button" onClick={onShowRegister}>
+              Create an account
+            </button>
           </p>
         </div>
       </section>
