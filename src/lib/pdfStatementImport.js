@@ -149,7 +149,7 @@ function parseBlock(block, columns, fileName, index) {
   const typeToken = tokens.find((token) => /^(C|CR|CREDIT|D|DR|DB|DEBIT)$/i.test(token.text.trim()));
   if (/^(C|CR|CREDIT)$/i.test(typeToken?.text || '')) isCredit = true;
   if (/^(D|DR|DB|DEBIT)$/i.test(typeToken?.text || '')) isCredit = false;
-  if (/\sCR$/i.test(amountToken.text.trim())) isCredit = true;
+  if (/CR$/i.test(amountToken.text.trim())) isCredit = true;
   if (/credit entry|deposit|salary|payment received|interest received/i.test(blockText)) isCredit = true;
   if (amountToken.amount === 0 || isCredit) return null;
 

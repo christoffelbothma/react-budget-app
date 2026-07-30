@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.7
+
+- Fixed FNB credit amounts ending directly in `Cr` so incoming money is excluded.
+
 ## 1.0.6
 
 - Added authenticated iPhone PDF compatibility processing through Convex.
