@@ -1,16 +1,16 @@
 import { useState } from 'react';
+import { useAuthActions } from '@convex-dev/auth/react';
 import budgetrLogo from '../assets/budgetr-logo.svg';
-import { supabase } from '../lib/supabaseClient';
 import { APP_VERSION } from '../version';
 import ThemeToggle from './ThemeToggle.jsx';
 
 export default function Register({ theme, onShowLogin, onThemeToggle }) {
+  const { signIn } = useAuthActions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
-  const [isVerificationSent, setIsVerificationSent] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -23,19 +23,15 @@ export default function Register({ theme, onShowLogin, onThemeToggle }) {
 
     setIsSubmitting(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    });
-
-    if (error) {
+    try {
+      const formData = new FormData();
+      formData.set('email', email);
+      formData.set('password', password);
+      formData.set('flow', 'signUp');
+      await signIn('password', formData);
+      setMessage('Your account has been created.');
+    } catch (error) {
       setMessage(error.message);
-    } else {
-      setIsVerificationSent(true);
-      setMessage('Check your email to verify your account before logging in.');
     }
 
     setIsSubmitting(false);
@@ -79,58 +75,48 @@ export default function Register({ theme, onShowLogin, onThemeToggle }) {
             <h2 id="register-title">Join BudgetR</h2>
           </div>
 
-          {isVerificationSent ? (
-            <div className="verification-panel">
-              <strong>Verify your email</strong>
-              <p>{message}</p>
-              <button className="primary-action" type="button" onClick={onShowLogin}>
-                Back to login
-              </button>
-            </div>
-          ) : (
-            <form className="login-form" onSubmit={handleSubmit}>
-              <label htmlFor="register-email">Email</label>
-              <input
-                id="register-email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
-              />
+          <form className="login-form" onSubmit={handleSubmit}>
+            <label htmlFor="register-email">Email</label>
+            <input
+              id="register-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+            />
 
-              <label htmlFor="register-password">Password</label>
-              <input
-                id="register-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Create a password"
-                autoComplete="new-password"
-                minLength={6}
-                required
-              />
+            <label htmlFor="register-password">Password</label>
+            <input
+              id="register-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="At least 8 characters"
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
 
-              <label htmlFor="register-confirm-password">Confirm password</label>
-              <input
-                id="register-confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="Repeat your password"
-                autoComplete="new-password"
-                minLength={6}
-                required
-              />
+            <label htmlFor="register-confirm-password">Confirm password</label>
+            <input
+              id="register-confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="Repeat your password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
 
-              <button className="primary-action" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating account...' : 'Create account'}
-              </button>
+            <button className="primary-action" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating account...' : 'Create account'}
+            </button>
 
-              {message && <p className="form-message">{message}</p>}
-            </form>
-          )}
+            {message && <p className="form-message">{message}</p>}
+          </form>
 
           <div className="login-theme-row">
             <ThemeToggle theme={theme} onToggle={onThemeToggle} />

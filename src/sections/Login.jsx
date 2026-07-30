@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useAuthActions } from '@convex-dev/auth/react';
 import budgetrLogo from '../assets/budgetr-logo.svg';
-import { supabase } from '../lib/supabaseClient';
 import { APP_VERSION } from '../version';
 import ThemeToggle from './ThemeToggle.jsx';
 
 export default function Login({ theme, onShowRegister, onThemeToggle }) {
+  const { signIn } = useAuthActions();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,12 +17,16 @@ export default function Login({ theme, onShowRegister, onThemeToggle }) {
     setMessage('');
     setIsSubmitting(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setMessage(error ? error.message : 'You are signed in.');
+    try {
+      const formData = new FormData();
+      formData.set('email', email);
+      formData.set('password', password);
+      formData.set('flow', 'signIn');
+      await signIn('password', formData);
+      setMessage('You are signed in.');
+    } catch (error) {
+      setMessage(error.message);
+    }
     setIsSubmitting(false);
   }
 
@@ -77,7 +82,7 @@ export default function Login({ theme, onShowRegister, onThemeToggle }) {
 
             <div className="field-topline">
               <label htmlFor="password">Password</label>
-              <a href="#reset">Forgot?</a>
+              <span>Secure sign-in</span>
             </div>
             <input
               id="password"

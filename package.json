@@ -6,17 +6,27 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.106.1",
-    "@vitejs/plugin-react": "latest",
+    "@auth/core": "^0.41.3",
+    "@convex-dev/auth": "^0.0.94",
+    "@vitejs/plugin-react": "^5.2.0",
+    "convex": "^1.42.3",
     "lucide-react": "^1.16.0",
+    "papaparse": "^5.5.4",
     "react": "latest",
     "react-dom": "latest",
-    "vite": "latest"
+    "recharts": "^3.10.1",
+    "vite": "^7.3.6"
   },
   "devDependencies": {
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "overrides": {
+    "filelist": "2.0.2"
   }
 }

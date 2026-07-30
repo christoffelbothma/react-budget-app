@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-30
+
+- Added installable PWA support with generated app icons and offline caching.
+- Added three-month CSV bank statement import, automatic categorisation, review editing, and duplicate protection.
+- Rebuilt the dashboard with interactive category, monthly trend, and weekly charts.
+
+## Unreleased
+
+- Replaced Supabase authentication and database calls with Convex.
+- Added protected Convex queries and mutations for transactions and debit orders.
+- Added realtime dashboard updates and idempotent monthly debit-order creation.
+- Added a safe, repeatable Supabase data-import mutation.
+
 ## 1.0.0 - 2026-06-02
 
 - Added Supabase authentication with login, registration, and email verification.

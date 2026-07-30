@@ -19,7 +19,7 @@ function groupByCategory(debitOrders) {
   }, {});
 }
 
-export default function DebitOrders({ debitOrders, isStorageReady, onSave }) {
+export default function DebitOrders({ debitOrders, onSave }) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dayOfMonth, setDayOfMonth] = useState('1');
@@ -128,16 +128,6 @@ export default function DebitOrders({ debitOrders, isStorageReady, onSave }) {
           </div>
 
           <div className="debit-category-list">
-            {!isStorageReady && (
-              <div className="empty-state">
-                <strong>Debit order storage is not ready yet</strong>
-                <p>
-                  You can draft debit orders in this session, but run the latest Supabase schema
-                  before they persist after refresh.
-                </p>
-              </div>
-            )}
-
             {Object.entries(groupedDebitOrders).length ? (
               Object.entries(groupedDebitOrders).map(([category, items]) => (
                 <article className="debit-category" key={category}>

@@ -1,6 +1,9 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ConvexAuthProvider, useAuthActions } from '@convex-dev/auth/react';
+import { ConvexReactClient, useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { Menu, X } from 'lucide-react';
+import { api } from '../convex/_generated/api';
 import DebitOrders from './sections/DebitOrders.jsx';
 import Dashboard from './sections/Dashboard.jsx';
 import Login from './sections/Login.jsx';
@@ -8,21 +11,37 @@ import MonthCalendar from './sections/MonthCalendar.jsx';
 import Products from './sections/Products.jsx';
 import QuickAdd from './sections/QuickAdd.jsx';
 import Register from './sections/Register.jsx';
-import { supabase } from './lib/supabaseClient';
+import StatementImport from './sections/StatementImport.jsx';
 import './style.css';
 
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function App() {
-  const [session, setSession] = useState(null);
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { signOut } = useAuthActions();
   const [activeView, setActiveView] = useState('dashboard');
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => !window.matchMedia('(max-width: 900px)').matches);
   const [authView, setAuthView] = useState('login');
   const [theme, setTheme] = useState(() => localStorage.getItem('budgetr-theme') || 'light');
-  const [transactions, setTransactions] = useState([]);
-  const [debitOrders, setDebitOrders] = useState([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [trackingError, setTrackingError] = useState('');
-  const [isDebitOrderStorageReady, setIsDebitOrderStorageReady] = useState(true);
+  const transactionResult = useQuery(api.budget.listTransactions, isAuthenticated ? {} : 'skip');
+  const debitOrderResult = useQuery(api.budget.listDebitOrders, isAuthenticated ? {} : 'skip');
+  const transactions = transactionResult ?? [];
+  const debitOrders = debitOrderResult ?? [];
+  const ensureDefaults = useMutation(api.budget.ensureDefaults);
+  const addTransaction = useMutation(api.budget.addTransaction);
+  const addDebitOrder = useMutation(api.budget.addDebitOrder);
+  const importTransactions = useMutation(api.budget.importTransactions);
+  const syncMonthlyDebitOrders = useMutation(api.budget.syncMonthlyDebitOrders);
+  const isLoadingTransactions = isAuthenticated && transactionResult === undefined;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -42,217 +61,81 @@ function App() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      setSession(currentSession);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    async function loadTrackingData() {
-      if (!session?.user?.id) {
-        setDebitOrders([]);
-        setTransactions([]);
-        return;
-      }
-
-      setIsLoadingTransactions(true);
-      setTrackingError('');
-
-      let transactionResponse = await supabase
-        .from('transactions')
-        .select('id, name, category, amount, transaction_date, tags, categories(name)')
-        .eq('user_id', session.user.id)
-        .order('transaction_date', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (transactionResponse.error) {
-        transactionResponse = await supabase
-          .from('transactions')
-          .select('id, name, amount, transaction_date, categories(name)')
-          .eq('user_id', session.user.id)
-          .order('transaction_date', { ascending: false })
-          .order('created_at', { ascending: false });
-      }
-
-      const debitOrderResponse = await supabase
-        .from('debit_orders')
-        .select('id, name, category, tags, amount, day_of_month, auto_add_monthly')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-
-      if (transactionResponse.error) {
-        setTrackingError(transactionResponse.error.message);
-      } else {
-        setTransactions(
-          transactionResponse.data.map((transaction) => ({
-            amount: Number(transaction.amount),
-            category: transaction.category || transaction.categories?.name || 'General',
-            date: transaction.transaction_date,
-            id: transaction.id,
-            name: transaction.name,
-            tags: transaction.tags || [],
-          })),
-        );
-      }
-
-      if (debitOrderResponse.error) {
-        setDebitOrders([]);
-        setIsDebitOrderStorageReady(false);
-      } else {
-        setIsDebitOrderStorageReady(true);
-        setDebitOrders(
-          debitOrderResponse.data.map((debitOrder) => ({
-            amount: Number(debitOrder.amount),
-            autoAddMonthly: debitOrder.auto_add_monthly,
-            category: debitOrder.category,
-            dayOfMonth: debitOrder.day_of_month,
-            id: debitOrder.id,
-            name: debitOrder.name,
-            tags: debitOrder.tags || [],
-          })),
-        );
-      }
-
-      setIsLoadingTransactions(false);
+    if (!isAuthenticated) {
+      return;
     }
 
-    loadTrackingData();
-  }, [session]);
+    const today = new Date();
+    const transactionDate = formatLocalDate(today);
+    const monthStart = `${transactionDate.slice(0, 7)}-01`;
 
-  useEffect(() => {
-    async function autoAddDebitOrders() {
-      if (!session?.user?.id || debitOrders.length === 0) {
-        return;
-      }
-
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const existingNames = new Set(
-        transactions
-          .filter((transaction) => transaction.date?.startsWith(currentMonth))
-          .map((transaction) => transaction.name),
-      );
-      const pendingDebitOrders = debitOrders.filter(
-        (debitOrder) => debitOrder.autoAddMonthly && !existingNames.has(debitOrder.name),
-      );
-
-      for (const debitOrder of pendingDebitOrders) {
-        await handleAddTransaction({
-          amount: debitOrder.amount,
-          category: debitOrder.category,
-          name: debitOrder.name,
-          tags: debitOrder.tags,
-        });
-      }
-    }
-
-    autoAddDebitOrders();
-  }, [debitOrders, session]);
+    Promise.all([
+      ensureDefaults({ monthStart }),
+      syncMonthlyDebitOrders({
+        currentMonth: transactionDate.slice(0, 7),
+        transactionDate,
+      }),
+    ]).catch((error) => {
+      setTrackingError(error.message);
+    });
+  }, [ensureDefaults, isAuthenticated, syncMonthlyDebitOrders]);
 
   async function handleAddTransaction(transaction) {
-    if (session?.user?.id) {
-      let response = await supabase.from('transactions').insert({
-        amount: transaction.amount,
-        category: transaction.category || 'General',
-        category_id: transaction.categoryId || null,
-        name: transaction.name,
-        tags: transaction.tags || [],
-        transaction_date: new Date().toISOString().slice(0, 10),
-        user_id: session.user.id,
-      }).select('id, name, category, amount, transaction_date, tags, categories(name)').single();
-
-      if (response.error) {
-        response = await supabase.from('transactions').insert({
+    if (isAuthenticated) {
+      try {
+        await addTransaction({
           amount: transaction.amount,
+          category: transaction.category || 'General',
           name: transaction.name,
-          transaction_date: new Date().toISOString().slice(0, 10),
-          user_id: session.user.id,
-        }).select('id, name, amount, transaction_date, categories(name)').single();
+          tags: transaction.tags || [],
+          transactionDate: formatLocalDate(new Date()),
+        });
+        setTrackingError('');
+      } catch (error) {
+        setTrackingError(error.message);
       }
-
-      if (response.error) {
-        setTrackingError(response.error.message);
-        return;
-      }
-
-      setTrackingError('');
-      setTransactions((currentTransactions) => [
-        {
-          amount: Number(response.data.amount),
-          category: response.data.category || response.data.categories?.name || transaction.category || 'General',
-          date: response.data.transaction_date,
-          id: response.data.id,
-          name: response.data.name,
-          tags: response.data.tags || transaction.tags || [],
-        },
-        ...currentTransactions,
-      ]);
-      return;
     }
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    setActiveView('dashboard');
+    setAuthView('login');
+    await signOut();
   }
 
   async function handleAddDebitOrder(debitOrder) {
-    if (!session?.user?.id) {
+    if (!isAuthenticated) {
       return;
     }
 
-    if (!isDebitOrderStorageReady) {
-      setDebitOrders((currentDebitOrders) => [
-        {
-          ...debitOrder,
-          id: crypto.randomUUID(),
-        },
-        ...currentDebitOrders,
-      ]);
-      return;
+    try {
+      await addDebitOrder({
+        amount: debitOrder.amount,
+        autoAddMonthly: debitOrder.autoAddMonthly,
+        category: debitOrder.category,
+        dayOfMonth: debitOrder.dayOfMonth,
+        name: debitOrder.name,
+        tags: debitOrder.tags || [],
+      });
+      setTrackingError('');
+    } catch (error) {
+      setTrackingError(error.message);
     }
+  }
 
-    const { data, error } = await supabase.from('debit_orders').insert({
-      amount: debitOrder.amount,
-      auto_add_monthly: debitOrder.autoAddMonthly,
-      category: debitOrder.category,
-      day_of_month: debitOrder.dayOfMonth,
-      name: debitOrder.name,
-      tags: debitOrder.tags || [],
-      user_id: session.user.id,
-    }).select('id, name, category, tags, amount, day_of_month, auto_add_monthly').single();
+  async function handleImportTransactions(importRows) {
+    const result = { imported: 0, skipped: 0 };
 
-    if (error) {
-      setIsDebitOrderStorageReady(false);
-      setDebitOrders((currentDebitOrders) => [
-        {
-          ...debitOrder,
-          id: crypto.randomUUID(),
-        },
-        ...currentDebitOrders,
-      ]);
-      return;
+    for (let index = 0; index < importRows.length; index += 200) {
+      const batchResult = await importTransactions({
+        transactions: importRows.slice(index, index + 200),
+      });
+      result.imported += batchResult.imported;
+      result.skipped += batchResult.skipped;
     }
 
     setTrackingError('');
-    setDebitOrders((currentDebitOrders) => [
-      {
-        amount: Number(data.amount),
-        autoAddMonthly: data.auto_add_monthly,
-        category: data.category,
-        dayOfMonth: data.day_of_month,
-        id: data.id,
-        name: data.name,
-        tags: data.tags || [],
-      },
-      ...currentDebitOrders,
-    ]);
+    return result;
   }
 
   function handleThemeToggle() {
@@ -267,7 +150,17 @@ function App() {
     }
   }
 
-  if (!session) {
+  if (isLoading) {
+    return (
+      <main className="login-page">
+        <section className="login-panel">
+          <p className="form-message">Loading BudgetR…</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
     if (authView === 'register') {
       return (
         <Register
@@ -346,6 +239,13 @@ function App() {
           >
             Debit orders
           </button>
+          <button
+            type="button"
+            className={activeView === 'import' ? 'active' : ''}
+            onClick={() => handleNavChange('import')}
+          >
+            Import statements
+          </button>
         </nav>
         <button className="sign-out-button" type="button" onClick={handleSignOut}>
           Sign out
@@ -360,12 +260,9 @@ function App() {
         {activeView === 'months' && <MonthCalendar transactions={transactions} />}
         {activeView === 'products' && <Products transactions={transactions} />}
         {activeView === 'debit-orders' && (
-          <DebitOrders
-            debitOrders={debitOrders}
-            isStorageReady={isDebitOrderStorageReady}
-            onSave={handleAddDebitOrder}
-          />
+          <DebitOrders debitOrders={debitOrders} onSave={handleAddDebitOrder} />
         )}
+        {activeView === 'import' && <StatementImport onImport={handleImportTransactions} />}
       </section>
 
       <QuickAdd onSave={handleAddTransaction} />
@@ -375,6 +272,8 @@ function App() {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ConvexAuthProvider client={convex}>
+      <App />
+    </ConvexAuthProvider>
   </StrictMode>,
 );
