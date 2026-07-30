@@ -31,7 +31,7 @@ const HEADER_ALIASES = {
   amount: ['amount', 'transactionamount', 'transactionvalue', 'value', 'amountzar'],
   credit: ['credit', 'credits', 'creditamount', 'deposit', 'deposits', 'depositamount', 'moneyin', 'paidin'],
   date: ['date', 'transactiondate', 'postingdate', 'valuedate', 'processeddate', 'effectivedate', 'bookdate'],
-  debit: ['debit', 'debits', 'debitamount', 'withdrawal', 'withdrawals', 'withdrawalamount', 'moneyout', 'paidout'],
+  debit: ['debit', 'debits', 'debitamount', 'payment', 'payments', 'withdrawal', 'withdrawals', 'withdrawalamount', 'moneyout', 'paidout'],
   description: [
     'description',
     'details',

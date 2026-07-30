@@ -70,7 +70,7 @@ function findColumns(lines) {
 
     const findX = (patterns) =>
       line.tokens.find((token) => patterns.some((pattern) => pattern.test(token.text.trim())))?.x;
-    const debitX = findX([/^debit$/i, /^money\s*out$/i, /^withdrawals?$/i]);
+    const debitX = findX([/^debit$/i, /^money\s*out$/i, /^payments?$/i, /^withdrawals?$/i]);
     const creditX = findX([/^credit$/i, /^money\s*in$/i, /^deposits?$/i]);
     const amountX = findX([/^amount$/i, /^value$/i]);
     const balanceX = findX([/^balance$/i, /^running\s*balance$/i]);

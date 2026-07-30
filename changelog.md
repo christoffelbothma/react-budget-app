@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.8
+
+- Added Standard Bank `Payments` and `Deposits` column support for PDF and CSV statements.
+
 ## 1.0.7
 
 - Fixed FNB credit amounts ending directly in `Cr` so incoming money is excluded.
