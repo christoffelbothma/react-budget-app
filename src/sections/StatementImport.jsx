@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CheckCircle2, FileSpreadsheet, Sparkles, Upload } from 'lucide-react';
-import Papa from 'papaparse';
-import { BUDGET_CATEGORIES, normaliseStatementRows } from '../lib/statementImport.js';
+import { BUDGET_CATEGORIES, parseCsvStatement } from '../lib/statementImport.js';
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-ZA', {
@@ -10,20 +9,18 @@ function formatCurrency(value) {
   }).format(value);
 }
 
-function parseFile(file) {
-  return new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      complete: ({ data, errors }) => {
-        const fatalError = errors.find((error) => error.type === 'Quotes');
-        if (fatalError) reject(new Error(`${file.name}: ${fatalError.message}`));
-        else resolve(normaliseStatementRows(data, file.name));
-      },
-      error: reject,
-      header: true,
-      skipEmptyLines: 'greedy',
-      worker: true,
-    });
-  });
+async function parseFile(file) {
+  if (file.size > 15 * 1024 * 1024) {
+    throw new Error(`${file.name}: choose a file smaller than 15 MB.`);
+  }
+
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  if (isPdf) {
+    const { parsePdfStatement } = await import('../lib/pdfStatementImport.js');
+    return await parsePdfStatement(file);
+  }
+
+  return parseCsvStatement(await file.text(), file.name);
 }
 
 export default function StatementImport({ onImport }) {
@@ -57,7 +54,7 @@ export default function StatementImport({ onImport }) {
         return;
       }
       setRows(parsedRows);
-      setMessage(parsedRows.length ? `${parsedRows.length} expenses found and auto-categorised.` : 'No expense rows were found. Check that your CSV has date, description and amount/debit columns.');
+      setMessage(parsedRows.length ? `${parsedRows.length} expenses found and auto-categorised.` : 'No expense rows were found in the selected statements.');
     } catch (error) {
       setRows([]);
       setMessage(error.message);
@@ -98,11 +95,11 @@ export default function StatementImport({ onImport }) {
         <FileSpreadsheet size={38} aria-hidden="true" />
         <div>
           <h3>Bring in up to three months</h3>
-          <p>Choose one to three bank-export CSV files. Credits are ignored; expenses are reviewed before saving.</p>
+          <p>Choose one to three bank-export CSV or text-based PDF files. Credits are ignored; expenses are reviewed before saving.</p>
         </div>
         <label className="primary-action import-picker">
-          <Upload size={18} /> {isBusy ? 'Reading…' : 'Choose CSV files'}
-          <input type="file" accept=".csv,text/csv" multiple disabled={isBusy} onChange={handleFiles} />
+          <Upload size={18} /> {isBusy ? 'Reading…' : 'Choose statements'}
+          <input type="file" accept=".csv,.pdf,text/csv,application/pdf" multiple disabled={isBusy} onChange={handleFiles} />
         </label>
       </section>
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Added private, on-device text extraction for PDF bank statements.
+- Added Standard Bank-friendly PDF column detection and expanded CSV header/preamble support.
+- Added clear guidance for scanned, password-protected, oversized, or unsupported statements.
+
 ## 1.0.1
 
 - Replaced internal Convex authentication errors with clear, user-friendly login messages.

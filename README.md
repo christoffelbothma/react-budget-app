@@ -5,7 +5,7 @@ A React budget tracker backed by Convex.
 ## Features
 
 - Installable PWA with automatic service-worker updates and offline app-shell support
-- Import one to three months of bank-export CSV statements
+- Import one to three months of bank-export CSV or text-based PDF statements
 - South African-friendly merchant auto-categorisation with a review step
 - Duplicate-safe imports; credits are excluded from expense tracking
 - Interactive category, six-month trend and weekly spending charts
@@ -35,7 +35,7 @@ npm run preview
 
 ## Bank statement imports
 
-Export CSV files from online banking, then choose **Import statements** in BudgetR. You can select up to three files covering no more than three months.
+Export CSV files or text-based PDF statements from online banking, then choose **Import statements** in BudgetR. You can select up to three files covering no more than three months. Files are parsed in your browser and are not sent to a separate document-processing service.
 
 The importer recognises common variations of:
 
@@ -45,6 +45,8 @@ The importer recognises common variations of:
 - Income: `Credit`, `Deposits`, `Money In` (ignored)
 
 Always review the detected category and selected rows before importing.
+
+Scanned/image-only and password-protected PDFs cannot be read. Download a text-based PDF or CSV from the bank instead.
 
 ## Backend
 
