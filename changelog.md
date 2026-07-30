@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5
+
+- Changed the default monthly budget to R0.
+- Added a Safari-compatible file reader fallback and safer PDF text extraction.
+- Replaced internal PDF-reader failures with clear update guidance.
+
 ## 1.0.4
 
 - Fixed PDF statement imports on iPhone and older Safari versions.

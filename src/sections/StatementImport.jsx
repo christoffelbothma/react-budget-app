@@ -37,6 +37,14 @@ async function parseFile(file) {
   return parseCsvStatement(await file.text(), file.name);
 }
 
+function friendlyImportError(error) {
+  const message = String(error?.message || '');
+  if (/undefined is not a function|not iterable|withResolvers/i.test(message)) {
+    return 'The PDF reader needs the latest BudgetR update. Install the available update, reopen the app, and try again.';
+  }
+  return message || 'BudgetR could not read that statement. Try a CSV export or a different PDF.';
+}
+
 export default function StatementImport({ onImport }) {
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState('');
@@ -68,7 +76,7 @@ export default function StatementImport({ onImport }) {
       setMessage(parsedRows.length ? `${parsedRows.length} expenses found and auto-categorised.` : 'No expense rows were found in the selected statements.');
     } catch (error) {
       setRows([]);
-      setMessage(error?.message || 'BudgetR could not read that statement. Try a CSV export or a different PDF.');
+      setMessage(friendlyImportError(error));
     } finally {
       setIsBusy(false);
       event.target.value = '';

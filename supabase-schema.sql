@@ -121,7 +121,7 @@ begin
   on conflict (user_id, name) do nothing;
 
   insert into public.budget_months (user_id, month_start, budget_amount)
-  values (new.id, date_trunc('month', now())::date, 18500)
+  values (new.id, date_trunc('month', now())::date, 0)
   on conflict (user_id, month_start) do nothing;
 
   return new;

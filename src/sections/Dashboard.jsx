@@ -14,7 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 
-const monthlyBudget = 18500;
+const monthlyBudget = 0;
 const CHART_COLORS = ['#0f6b58', '#e7b45f', '#365f91', '#9b3d27', '#8b5cf6', '#d97706', '#16a34a', '#64748b'];
 
 function formatCurrency(value, compact = false) {
@@ -63,7 +63,9 @@ export default function Dashboard({ isLoading, transactions }) {
   );
   const currentSpent = currentMonthTransactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   const remaining = monthlyBudget - currentSpent;
-  const spentPercent = Math.min(Math.round((currentSpent / monthlyBudget) * 100), 100);
+  const spentPercent = monthlyBudget > 0
+    ? Math.min(Math.round((currentSpent / monthlyBudget) * 100), 100)
+    : 0;
 
   const categoryData = useMemo(() => {
     const grouped = rangeTransactions.reduce((totals, transaction) => {

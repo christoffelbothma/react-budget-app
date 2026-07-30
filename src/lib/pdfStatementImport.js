@@ -10,12 +10,25 @@ GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const MONEY_PATTERN = /(?:R\s*)?\(?-?\d[\d\s,]*[.,]\d{2}\)?-?(?:\s*(?:CR|DR|DB))?$/i;
 
-function groupTextItems(items, pageNumber) {
+function readFileAsArrayBuffer(file) {
+  if (typeof file?.arrayBuffer === 'function') {
+    return file.arrayBuffer();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('The selected file could not be read.'));
+    reader.onload = () => resolve(reader.result);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function groupTextItems(items = [], pageNumber) {
   const lines = [];
 
-  for (const item of items) {
+  items.forEach((item) => {
     const text = String(item.str || '').trim();
-    if (!text) continue;
+    if (!text) return;
     const x = item.transform?.[4] ?? 0;
     const y = item.transform?.[5] ?? 0;
     let line = lines.find((candidate) => Math.abs(candidate.y - y) <= 2.5);
@@ -25,7 +38,7 @@ function groupTextItems(items, pageNumber) {
       lines.push(line);
     }
     line.tokens.push({ text, x });
-  }
+  });
 
   return lines
     .map((line) => ({
@@ -163,11 +176,16 @@ function parseBlock(block, columns, fileName, index) {
 }
 
 export async function parsePdfStatement(file) {
-  const data = new Uint8Array(await file.arrayBuffer());
+  const data = new Uint8Array(await readFileAsArrayBuffer(file));
   let document;
 
   try {
-    document = await getDocument({ data }).promise;
+    document = await getDocument({
+      data,
+      disableFontFace: true,
+      isEvalSupported: false,
+      useWasm: false,
+    }).promise;
   } catch (error) {
     if (/password/i.test(String(error?.message || error))) {
       throw new Error(`${file.name}: remove the PDF password before importing it.`);
@@ -178,11 +196,18 @@ export async function parsePdfStatement(file) {
   const lines = [];
   let extractedCharacters = 0;
 
-  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-    const page = await document.getPage(pageNumber);
-    const content = await page.getTextContent();
-    extractedCharacters += content.items.reduce((total, item) => total + String(item.str || '').length, 0);
-    lines.push(...groupTextItems(content.items, pageNumber));
+  try {
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const items = Array.isArray(content?.items) ? content.items : [];
+      extractedCharacters += items.reduce((total, item) => total + String(item.str || '').length, 0);
+      lines.push(...groupTextItems(items, pageNumber));
+    }
+  } catch {
+    throw new Error(
+      `${file.name}: BudgetR could not read this PDF on your device. Make sure the latest app update is installed, or use a CSV export.`,
+    );
   }
 
   if (extractedCharacters < 40) {

@@ -58,7 +58,7 @@ export const ensureDefaults = mutation({
 
     if (!existingMonth) {
       await ctx.db.insert("budgetMonths", {
-        budgetAmount: 18500,
+        budgetAmount: 0,
         monthStart,
         userId,
       });

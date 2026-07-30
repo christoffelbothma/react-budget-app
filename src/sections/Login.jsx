@@ -43,7 +43,7 @@ export default function Login({ theme, onShowRegister, onThemeToggle }) {
         <div className="balance-preview" aria-hidden="true">
           <div className="preview-row">
             <span>Monthly budget</span>
-            <strong>R 18,500</strong>
+            <strong>R 0</strong>
           </div>
           <div className="meter">
             <span />
