@@ -1,5 +1,5 @@
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import {
   createStatementTransaction,
   parseStatementAmount,
@@ -57,10 +57,10 @@ function findColumns(lines) {
 
     const findX = (patterns) =>
       line.tokens.find((token) => patterns.some((pattern) => pattern.test(token.text.trim())))?.x;
-    const debitX = findX([/^debit/i, /^money\s*out$/i, /^withdrawal/i]);
-    const creditX = findX([/^credit/i, /^money\s*in$/i, /^deposit/i]);
-    const amountX = findX([/^amount/i, /^value$/i]);
-    const balanceX = findX([/^balance/i, /^running\s*balance/i]);
+    const debitX = findX([/^debit$/i, /^money\s*out$/i, /^withdrawals?$/i]);
+    const creditX = findX([/^credit$/i, /^money\s*in$/i, /^deposits?$/i]);
+    const amountX = findX([/^amount$/i, /^value$/i]);
+    const balanceX = findX([/^balance$/i, /^running\s*balance$/i]);
 
     if (debitX !== undefined || creditX !== undefined || amountX !== undefined) {
       return { amountX, balanceX, creditX, debitX };
@@ -108,7 +108,7 @@ function parseBlock(block, columns, fileName, index) {
   if (!moneyTokens.length) return null;
 
   const balanceToken = columns.balanceX === undefined
-    ? (moneyTokens.length > 1 ? moneyTokens.at(-1) : null)
+    ? (moneyTokens.length > 1 ? moneyTokens[moneyTokens.length - 1] : null)
     : moneyTokens.reduce((closest, token) => {
         if (!closest) return token;
         return distance(token.x, columns.balanceX) < distance(closest.x, columns.balanceX) ? token : closest;
@@ -129,7 +129,7 @@ function parseBlock(block, columns, fileName, index) {
     amountToken = candidates.reduce((closest, token) =>
       distance(token.x, columns.amountX) < distance(closest.x, columns.amountX) ? token : closest, candidates[0]);
   } else if (candidates.length > 1) {
-    amountToken = candidates.at(-1);
+    amountToken = candidates[candidates.length - 1];
   }
 
   const blockText = tokens.map((token) => token.text).join(' ');

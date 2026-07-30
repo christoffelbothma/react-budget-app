@@ -9,6 +9,20 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function getStatementPeriod(rows) {
+  const dates = rows
+    .map((row) => Date.parse(`${row.transactionDate}T00:00:00Z`))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  if (!dates.length) return { days: 0, months: 0 };
+
+  const days = Math.round((dates[dates.length - 1] - dates[0]) / 86400000);
+  return {
+    days,
+    months: Math.max(1, Math.ceil(days / 31)),
+  };
+}
+
 async function parseFile(file) {
   if (file.size > 15 * 1024 * 1024) {
     throw new Error(`${file.name}: choose a file smaller than 15 MB.`);
@@ -29,10 +43,7 @@ export default function StatementImport({ onImport }) {
   const [isBusy, setIsBusy] = useState(false);
   const includedRows = rows.filter((row) => row.included);
   const total = includedRows.reduce((sum, row) => sum + row.amount, 0);
-  const monthCount = useMemo(
-    () => new Set(rows.map((row) => row.transactionDate.slice(0, 7))).size,
-    [rows],
-  );
+  const statementPeriod = useMemo(() => getStatementPeriod(rows), [rows]);
 
   async function handleFiles(event) {
     const files = Array.from(event.target.files || []);
@@ -47,8 +58,8 @@ export default function StatementImport({ onImport }) {
     setIsBusy(true);
     try {
       const parsedRows = (await Promise.all(files.map(parseFile))).flat();
-      const detectedMonths = new Set(parsedRows.map((row) => row.transactionDate.slice(0, 7)));
-      if (detectedMonths.size > 3) {
+      const detectedPeriod = getStatementPeriod(parsedRows);
+      if (detectedPeriod.days > 93) {
         setRows([]);
         setMessage('These statements span more than three months. Please choose a three-month period.');
         return;
@@ -57,7 +68,7 @@ export default function StatementImport({ onImport }) {
       setMessage(parsedRows.length ? `${parsedRows.length} expenses found and auto-categorised.` : 'No expense rows were found in the selected statements.');
     } catch (error) {
       setRows([]);
-      setMessage(error.message);
+      setMessage(error?.message || 'BudgetR could not read that statement. Try a CSV export or a different PDF.');
     } finally {
       setIsBusy(false);
       event.target.value = '';
@@ -75,7 +86,7 @@ export default function StatementImport({ onImport }) {
       setRows([]);
       setMessage(`${result.imported} expenses imported${result.skipped ? `; ${result.skipped} duplicates skipped` : ''}.`);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(error?.message || 'BudgetR could not import those expenses. Please try again.');
     } finally {
       setIsBusy(false);
     }
@@ -109,7 +120,7 @@ export default function StatementImport({ onImport }) {
         <>
           <section className="import-summary" aria-label="Import summary">
             <div><span>Detected</span><strong>{rows.length} expenses</strong></div>
-            <div><span>Months</span><strong>{monthCount}</strong></div>
+            <div><span>Months</span><strong>{statementPeriod.months}</strong></div>
             <div><span>Selected total</span><strong>{formatCurrency(total)}</strong></div>
           </section>
 

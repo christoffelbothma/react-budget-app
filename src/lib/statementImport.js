@@ -66,8 +66,8 @@ function findValue(row, aliases) {
 export function parseStatementAmount(value) {
   let cleaned = String(value ?? '')
     .replace(/\s/g, '')
-    .replace(/[R$]/gi, '')
     .replace(/(CR|DR|DB)$/i, '')
+    .replace(/[R$]/gi, '')
     .replace(/,(?=\d{3}(?:\D|$))/g, '')
     .replace(',', '.')
     .replace(/[()]/g, (match) => (match === '(' ? '-' : ''));

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+- Fixed PDF statement imports on iPhone and older Safari versions.
+- Added support for FNB statement PDFs with Amount and Balance columns.
+- Corrected credit/debit detection for balances ending in `Cr`, `Dr`, or `Db`.
+
 ## 1.0.3
 
 - Added an in-app confirmation when a newer BudgetR version is ready.
