@@ -21,7 +21,7 @@ export function getLoginErrorMessage(error) {
     return 'We could not connect to BudgetR. Check your internet connection and try again.';
   }
 
-  return 'We could not sign you in right now. Please try again.';
+  return 'Incorrect email or password. Please check your details and try again.';
 }
 
 export function getRegistrationErrorMessage(error) {
