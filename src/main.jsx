@@ -27,8 +27,8 @@ function App() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useAuthActions();
   const [activeView, setActiveView] = useState('dashboard');
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 900px)').matches);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !window.matchMedia('(max-width: 900px)').matches);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1024px)').matches);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !window.matchMedia('(max-width: 1024px)').matches);
   const [authView, setAuthView] = useState('login');
   const [theme, setTheme] = useState(() => localStorage.getItem('budgetr-theme') || 'light');
   const [trackingError, setTrackingError] = useState('');
@@ -49,7 +49,7 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const mediaQuery = window.matchMedia('(max-width: 1024px)');
 
     function handleMediaChange(event) {
       setIsMobile(event.matches);
@@ -206,7 +206,7 @@ function App() {
       )}
 
       <aside className="app-sidebar">
-        <div>
+        <div className="sidebar-brand">
           <p className="eyebrow">BudgetR</p>
           <h1>Money map</h1>
         </div>

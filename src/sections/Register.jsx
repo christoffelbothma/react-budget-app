@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import budgetrLogo from '../assets/budgetr-logo.svg';
+import { getRegistrationErrorMessage } from '../lib/authErrors.js';
 import { APP_VERSION } from '../version';
 import ThemeToggle from './ThemeToggle.jsx';
 
@@ -25,16 +26,16 @@ export default function Register({ theme, onShowLogin, onThemeToggle }) {
 
     try {
       const formData = new FormData();
-      formData.set('email', email);
+      formData.set('email', email.trim().toLowerCase());
       formData.set('password', password);
       formData.set('flow', 'signUp');
       await signIn('password', formData);
       setMessage('Your account has been created.');
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getRegistrationErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   }
 
   return (
@@ -84,6 +85,8 @@ export default function Register({ theme, onShowLogin, onThemeToggle }) {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
+              autoCapitalize="none"
+              spellCheck="false"
               required
             />
 
@@ -115,7 +118,7 @@ export default function Register({ theme, onShowLogin, onThemeToggle }) {
               {isSubmitting ? 'Creating account...' : 'Create account'}
             </button>
 
-            {message && <p className="form-message">{message}</p>}
+            {message && <p className="form-message" role="alert" aria-live="polite">{message}</p>}
           </form>
 
           <div className="login-theme-row">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthActions } from '@convex-dev/auth/react';
 import budgetrLogo from '../assets/budgetr-logo.svg';
+import { getLoginErrorMessage } from '../lib/authErrors.js';
 import { APP_VERSION } from '../version';
 import ThemeToggle from './ThemeToggle.jsx';
 
@@ -19,15 +20,16 @@ export default function Login({ theme, onShowRegister, onThemeToggle }) {
 
     try {
       const formData = new FormData();
-      formData.set('email', email);
+      formData.set('email', email.trim().toLowerCase());
       formData.set('password', password);
       formData.set('flow', 'signIn');
       await signIn('password', formData);
       setMessage('You are signed in.');
     } catch (error) {
-      setMessage(error.message);
+      setMessage(getLoginErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   }
 
   return (
@@ -77,6 +79,8 @@ export default function Login({ theme, onShowRegister, onThemeToggle }) {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
+              autoCapitalize="none"
+              spellCheck="false"
               required
             />
 
@@ -107,7 +111,7 @@ export default function Login({ theme, onShowRegister, onThemeToggle }) {
               {isSubmitting ? 'Signing in...' : 'Sign in'}
             </button>
 
-            {message && <p className="form-message">{message}</p>}
+            {message && <p className="form-message" role="alert" aria-live="polite">{message}</p>}
           </form>
 
           <div className="login-theme-row">

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Replaced internal Convex authentication errors with clear, user-friendly login messages.
+- Fixed the mobile navigation drawer position, safe-area spacing, scrolling, and sign-out access on iPhone-sized screens.
+
 ## 2026-07-30
 
 - Added installable PWA support with generated app icons and offline caching.
