@@ -772,6 +772,94 @@ h2 {
   opacity: 0.42;
 }
 
+.pwa-update-prompt {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 100;
+  width: min(440px, calc(100vw - 40px));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px 14px;
+  border: 1px solid #cfc7b8;
+  border-radius: 14px;
+  padding: 18px;
+  background: #fffaf2;
+  color: #172033;
+  box-shadow: 0 26px 70px rgba(25, 33, 46, 0.24);
+}
+
+.pwa-update-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e7b45f;
+  color: #173e37;
+}
+
+.pwa-update-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.pwa-update-copy strong {
+  font-size: 1.05rem;
+}
+
+.pwa-update-copy p {
+  margin: 0;
+  color: #5b6372;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.pwa-update-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.pwa-update-actions button {
+  min-height: 42px;
+  border-radius: 8px;
+  padding: 0 14px;
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.pwa-update-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.pwa-update-later {
+  background: #efe7d8;
+  color: #344054;
+}
+
+.pwa-update-now {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: #0f6b58;
+  color: #ffffff;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .chart-panel,
 .table-panel {
   padding: 24px;
@@ -1428,6 +1516,22 @@ h2 {
   border-bottom-color: #2b3942;
 }
 
+[data-theme="dark"] .pwa-update-prompt {
+  border-color: #384852;
+  background: #162027;
+  color: #edf3ef;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.44);
+}
+
+[data-theme="dark"] .pwa-update-copy p {
+  color: #a9b7c2;
+}
+
+[data-theme="dark"] .pwa-update-later {
+  background: #27343d;
+  color: #edf3ef;
+}
+
 @media (max-width: 1024px) {
   .login-page {
     grid-template-columns: 1fr;
@@ -1581,6 +1685,18 @@ h2 {
   .quick-add {
     right: max(18px, env(safe-area-inset-right));
     bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .pwa-update-prompt {
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: max(14px, env(safe-area-inset-left));
+    width: auto;
+    padding: 16px;
+  }
+
+  .pwa-update-actions button {
+    flex: 1;
   }
 
   .metric-grid {

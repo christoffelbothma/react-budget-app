@@ -9,6 +9,7 @@ import Dashboard from './sections/Dashboard.jsx';
 import Login from './sections/Login.jsx';
 import MonthCalendar from './sections/MonthCalendar.jsx';
 import Products from './sections/Products.jsx';
+import PwaUpdatePrompt from './sections/PwaUpdatePrompt.jsx';
 import QuickAdd from './sections/QuickAdd.jsx';
 import Register from './sections/Register.jsx';
 import StatementImport from './sections/StatementImport.jsx';
@@ -274,6 +275,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ConvexAuthProvider client={convex}>
       <App />
+      <PwaUpdatePrompt />
     </ConvexAuthProvider>
   </StrictMode>,
 );

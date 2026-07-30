@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- Added an in-app confirmation when a newer BudgetR version is ready.
+- Users can install the update immediately or defer it until later.
+
 ## 1.0.2
 
 - Added private, on-device text extraction for PDF bank statements.
