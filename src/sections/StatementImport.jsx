@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
+import { useAction } from 'convex/react';
 import { CheckCircle2, FileSpreadsheet, Sparkles, Upload } from 'lucide-react';
+import { api } from '../../convex/_generated/api';
 import { BUDGET_CATEGORIES, parseCsvStatement } from '../lib/statementImport.js';
+
+const MAX_COMPATIBILITY_PDF_BYTES = 3 * 1024 * 1024;
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-ZA', {
@@ -23,15 +27,53 @@ function getStatementPeriod(rows) {
   };
 }
 
-async function parseFile(file) {
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 32768) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+  }
+  return btoa(binary);
+}
+
+async function parseFile(file, extractPdfText) {
   if (file.size > 15 * 1024 * 1024) {
     throw new Error(`${file.name}: choose a file smaller than 15 MB.`);
   }
 
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   if (isPdf) {
-    const { parsePdfStatement } = await import('../lib/pdfStatementImport.js');
-    return await parsePdfStatement(file);
+    const {
+      parseExtractedPdfPages,
+      parsePdfStatement,
+      readFileAsArrayBuffer,
+    } = await import('../lib/pdfStatementImport.js');
+    const forceCompatibilityMode = import.meta.env.DEV
+      && new URLSearchParams(window.location.search).has('force-pdf-compatibility');
+
+    if (!forceCompatibilityMode) {
+      try {
+        return await parsePdfStatement(file);
+      } catch (error) {
+        if (error?.code !== 'PDF_DEVICE_READ_FAILED') throw error;
+      }
+    }
+
+    if (file.size > MAX_COMPATIBILITY_PDF_BYTES) {
+      throw new Error(
+        `${file.name}: Safari could not read this PDF and it is too large for compatibility mode. Use a CSV export or a PDF smaller than 3 MB.`,
+      );
+    }
+
+    try {
+      const buffer = await readFileAsArrayBuffer(file);
+      const result = await extractPdfText({ dataBase64: arrayBufferToBase64(buffer) });
+      return parseExtractedPdfPages(result.pages, file.name);
+    } catch {
+      throw new Error(
+        `${file.name}: BudgetR could not read this PDF, even in iPhone compatibility mode. Try a CSV export.`,
+      );
+    }
   }
 
   return parseCsvStatement(await file.text(), file.name);
@@ -46,6 +88,7 @@ function friendlyImportError(error) {
 }
 
 export default function StatementImport({ onImport }) {
+  const extractPdfText = useAction(api.pdf.extractPdfText);
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState('');
   const [isBusy, setIsBusy] = useState(false);
@@ -65,7 +108,7 @@ export default function StatementImport({ onImport }) {
 
     setIsBusy(true);
     try {
-      const parsedRows = (await Promise.all(files.map(parseFile))).flat();
+      const parsedRows = (await Promise.all(files.map((file) => parseFile(file, extractPdfText)))).flat();
       const detectedPeriod = getStatementPeriod(parsedRows);
       if (detectedPeriod.days > 93) {
         setRows([]);
@@ -115,6 +158,7 @@ export default function StatementImport({ onImport }) {
         <div>
           <h3>Bring in up to three months</h3>
           <p>Choose one to three bank-export CSV or text-based PDF files. Credits are ignored; expenses are reviewed before saving.</p>
+          <small>PDFs are read on your device first. If iPhone Safari cannot read one, BudgetR processes it once without saving the file to your account.</small>
         </div>
         <label className="primary-action import-picker">
           <Upload size={18} /> {isBusy ? 'Reading…' : 'Choose statements'}

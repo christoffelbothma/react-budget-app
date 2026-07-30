@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6
+
+- Added authenticated iPhone PDF compatibility processing through Convex.
+- PDFs are still read on-device first and are never saved to the user's account.
+
 ## 1.0.5
 
 - Changed the default monthly budget to R0.

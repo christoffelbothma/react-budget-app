@@ -10,7 +10,7 @@ GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const MONEY_PATTERN = /(?:R\s*)?\(?-?\d[\d\s,]*[.,]\d{2}\)?-?(?:\s*(?:CR|DR|DB))?$/i;
 
-function readFileAsArrayBuffer(file) {
+export function readFileAsArrayBuffer(file) {
   if (typeof file?.arrayBuffer === 'function') {
     return file.arrayBuffer();
   }
@@ -29,8 +29,8 @@ function groupTextItems(items = [], pageNumber) {
   items.forEach((item) => {
     const text = String(item.str || '').trim();
     if (!text) return;
-    const x = item.transform?.[4] ?? 0;
-    const y = item.transform?.[5] ?? 0;
+    const x = item.x ?? item.transform?.[4] ?? 0;
+    const y = item.y ?? item.transform?.[5] ?? 0;
     let line = lines.find((candidate) => Math.abs(candidate.y - y) <= 2.5);
 
     if (!line) {
@@ -175,6 +175,40 @@ function parseBlock(block, columns, fileName, index) {
   });
 }
 
+export function parseExtractedPdfPages(pages, fileName) {
+  const lines = [];
+  let extractedCharacters = 0;
+
+  (pages || []).forEach(({ items, pageNumber }) => {
+    const safeItems = Array.isArray(items) ? items : [];
+    extractedCharacters += safeItems.reduce((total, item) => total + String(item.str || '').length, 0);
+    lines.push(...groupTextItems(safeItems, pageNumber));
+  });
+
+  if (extractedCharacters < 40) {
+    throw new Error(
+      `${fileName}: this appears to be a scanned PDF. Download a text-based statement or CSV from your bank.`,
+    );
+  }
+
+  const years = lines
+    .flatMap((line) => lineText(line).match(/\b20\d{2}\b/g) || [])
+    .map(Number);
+  const fallbackYear = years.length ? Math.max(...years) : new Date().getFullYear();
+  const columns = findColumns(lines);
+  const rows = buildTransactionBlocks(lines, fallbackYear)
+    .map((block, index) => parseBlock(block, columns, fileName, index))
+    .filter(Boolean);
+
+  if (!rows.length) {
+    throw new Error(
+      `${fileName}: no transaction rows were recognised. Try the bank's transaction-history PDF or CSV export.`,
+    );
+  }
+
+  return rows;
+}
+
 export async function parsePdfStatement(file) {
   const data = new Uint8Array(await readFileAsArrayBuffer(file));
   let document;
@@ -190,46 +224,29 @@ export async function parsePdfStatement(file) {
     if (/password/i.test(String(error?.message || error))) {
       throw new Error(`${file.name}: remove the PDF password before importing it.`);
     }
-    throw new Error(`${file.name}: BudgetR could not open this PDF.`);
+    const openError = new Error(`${file.name}: BudgetR could not open this PDF on your device.`);
+    openError.code = 'PDF_DEVICE_READ_FAILED';
+    throw openError;
   }
 
-  const lines = [];
-  let extractedCharacters = 0;
-
   try {
+    const pages = [];
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const content = await page.getTextContent();
-      const items = Array.isArray(content?.items) ? content.items : [];
-      extractedCharacters += items.reduce((total, item) => total + String(item.str || '').length, 0);
-      lines.push(...groupTextItems(items, pageNumber));
+      pages.push({ items: content?.items, pageNumber });
     }
-  } catch {
-    throw new Error(
-      `${file.name}: BudgetR could not read this PDF on your device. Make sure the latest app update is installed, or use a CSV export.`,
-    );
+    return parseExtractedPdfPages(pages, file.name);
+  } catch (error) {
+    if (error?.code || /scanned PDF|no transaction rows/i.test(String(error?.message || ''))) {
+      throw error;
+    }
+    const readError = new Error(`${file.name}: BudgetR could not read this PDF on your device.`);
+    readError.code = 'PDF_DEVICE_READ_FAILED';
+    throw readError;
+  } finally {
+    if (typeof document?.cleanup === 'function') {
+      await document.cleanup();
+    }
   }
-
-  if (extractedCharacters < 40) {
-    throw new Error(
-      `${file.name}: this appears to be a scanned PDF. Download a text-based statement or CSV from your bank.`,
-    );
-  }
-
-  const years = lines
-    .flatMap((line) => lineText(line).match(/\b20\d{2}\b/g) || [])
-    .map(Number);
-  const fallbackYear = years.length ? Math.max(...years) : new Date().getFullYear();
-  const columns = findColumns(lines);
-  const rows = buildTransactionBlocks(lines, fallbackYear)
-    .map((block, index) => parseBlock(block, columns, file.name, index))
-    .filter(Boolean);
-
-  if (!rows.length) {
-    throw new Error(
-      `${file.name}: no transaction rows were recognised. Try the bank's transaction-history PDF or CSV export.`,
-    );
-  }
-
-  return rows;
 }
