@@ -12,6 +12,7 @@ import Products from './sections/Products.jsx';
 import PwaUpdatePrompt from './sections/PwaUpdatePrompt.jsx';
 import QuickAdd from './sections/QuickAdd.jsx';
 import Register from './sections/Register.jsx';
+import Settings from './sections/Settings.jsx';
 import StatementImport from './sections/StatementImport.jsx';
 import './style.css';
 
@@ -35,11 +36,18 @@ function App() {
   const [trackingError, setTrackingError] = useState('');
   const transactionResult = useQuery(api.budget.listTransactions, isAuthenticated ? {} : 'skip');
   const debitOrderResult = useQuery(api.budget.listDebitOrders, isAuthenticated ? {} : 'skip');
+  const currentMonthStart = `${formatLocalDate(new Date()).slice(0, 7)}-01`;
+  const budgetMonth = useQuery(api.budget.getBudgetMonth, isAuthenticated ? { monthStart: currentMonthStart } : 'skip');
   const transactions = transactionResult ?? [];
   const debitOrders = debitOrderResult ?? [];
   const ensureDefaults = useMutation(api.budget.ensureDefaults);
   const addTransaction = useMutation(api.budget.addTransaction);
   const addDebitOrder = useMutation(api.budget.addDebitOrder);
+  const updateDebitOrder = useMutation(api.budget.updateDebitOrder);
+  const deleteDebitOrder = useMutation(api.budget.deleteDebitOrder);
+  const updateTransaction = useMutation(api.budget.updateTransaction);
+  const deleteTransaction = useMutation(api.budget.deleteTransaction);
+  const setMonthlyBudget = useMutation(api.budget.setMonthlyBudget);
   const importTransactions = useMutation(api.budget.importTransactions);
   const syncMonthlyDebitOrders = useMutation(api.budget.syncMonthlyDebitOrders);
   const isLoadingTransactions = isAuthenticated && transactionResult === undefined;
@@ -89,11 +97,12 @@ function App() {
           category: transaction.category || 'General',
           name: transaction.name,
           tags: transaction.tags || [],
-          transactionDate: formatLocalDate(new Date()),
+          transactionDate: transaction.transactionDate || formatLocalDate(new Date()),
         });
         setTrackingError('');
       } catch (error) {
         setTrackingError(error.message);
+        throw error;
       }
     }
   }
@@ -121,6 +130,66 @@ function App() {
       setTrackingError('');
     } catch (error) {
       setTrackingError(error.message);
+      throw error;
+    }
+  }
+
+  async function handleUpdateTransaction(transaction) {
+    try {
+      await updateTransaction(transaction);
+      setTrackingError('');
+    } catch (error) {
+      setTrackingError(error.message);
+      throw error;
+    }
+  }
+
+  async function handleDeleteTransaction(id) {
+    try {
+      await deleteTransaction({ id });
+      setTrackingError('');
+    } catch (error) {
+      setTrackingError(error.message);
+      throw error;
+    }
+  }
+
+  async function handleUpdateDebitOrder(debitOrder) {
+    try {
+      await updateDebitOrder({
+        id: debitOrder.id,
+        active: debitOrder.active,
+        amount: Number(debitOrder.amount),
+        autoAddMonthly: debitOrder.autoAddMonthly,
+        category: debitOrder.category,
+        dayOfMonth: Number(debitOrder.dayOfMonth),
+        name: debitOrder.name,
+        tags: debitOrder.tags || [],
+      });
+      setTrackingError('');
+    } catch (error) {
+      setTrackingError(error.message);
+      throw error;
+    }
+  }
+
+  async function handleDeleteDebitOrder(id) {
+    try {
+      await deleteDebitOrder({ id });
+      setTrackingError('');
+    } catch (error) {
+      setTrackingError(error.message);
+      throw error;
+    }
+  }
+
+  async function handleBudgetSave(amount) {
+    try {
+      await setMonthlyBudget({ amount, monthStart: currentMonthStart });
+      setTrackingError('');
+    } catch (error) {
+      setTrackingError(error.message);
+      throw error;
     }
   }
 
@@ -141,6 +210,10 @@ function App() {
 
   function handleThemeToggle() {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
+  }
+
+  function handleThemeChange(nextTheme) {
+    setTheme(nextTheme);
   }
 
   function handleNavChange(view) {
@@ -247,6 +320,13 @@ function App() {
           >
             Import statements
           </button>
+          <button
+            type="button"
+            className={activeView === 'settings' ? 'active' : ''}
+            onClick={() => handleNavChange('settings')}
+          >
+            Settings
+          </button>
         </nav>
         <button className="sign-out-button" type="button" onClick={handleSignOut}>
           Sign out
@@ -256,14 +336,35 @@ function App() {
       <section className="workspace">
         {trackingError && <p className="form-message">{trackingError}</p>}
         {activeView === 'dashboard' && (
-          <Dashboard isLoading={isLoadingTransactions} transactions={transactions} />
+          <Dashboard
+            isLoading={isLoadingTransactions}
+            monthlyBudget={budgetMonth?.amount ?? 0}
+            onBudgetSave={handleBudgetSave}
+            onTransactionDelete={handleDeleteTransaction}
+            onTransactionUpdate={handleUpdateTransaction}
+            transactions={transactions}
+          />
         )}
         {activeView === 'months' && <MonthCalendar transactions={transactions} />}
-        {activeView === 'products' && <Products transactions={transactions} />}
+        {activeView === 'products' && (
+          <Products
+            onTransactionDelete={handleDeleteTransaction}
+            onTransactionUpdate={handleUpdateTransaction}
+            transactions={transactions}
+          />
+        )}
         {activeView === 'debit-orders' && (
-          <DebitOrders debitOrders={debitOrders} onSave={handleAddDebitOrder} />
+          <DebitOrders
+            debitOrders={debitOrders}
+            onDelete={handleDeleteDebitOrder}
+            onSave={handleAddDebitOrder}
+            onUpdate={handleUpdateDebitOrder}
+          />
         )}
         {activeView === 'import' && <StatementImport onImport={handleImportTransactions} />}
+        {activeView === 'settings' && (
+          <Settings theme={theme} onThemeChange={handleThemeChange} />
+        )}
       </section>
 
       <QuickAdd onSave={handleAddTransaction} />

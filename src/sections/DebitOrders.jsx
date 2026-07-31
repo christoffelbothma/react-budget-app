@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarClock, Repeat } from 'lucide-react';
+import { CalendarClock, Pause, Pencil, Play, Repeat, Trash2 } from 'lucide-react';
 import { findProduct, productCatalog } from '../lib/productCatalog';
 
 function formatCurrency(value) {
@@ -19,36 +19,85 @@ function groupByCategory(debitOrders) {
   }, {});
 }
 
-export default function DebitOrders({ debitOrders, onSave }) {
+export default function DebitOrders({ debitOrders, onDelete, onSave, onUpdate }) {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dayOfMonth, setDayOfMonth] = useState('1');
   const [autoAddMonthly, setAutoAddMonthly] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [isBusy, setIsBusy] = useState(false);
+  const [message, setMessage] = useState('');
   const selectedProduct = name ? findProduct(name) : null;
   const groupedDebitOrders = useMemo(() => groupByCategory(debitOrders), [debitOrders]);
   const filteredProducts = productCatalog.filter((product) =>
     product.name.toLowerCase().includes(name.toLowerCase()),
   );
 
-  function handleSubmit(event) {
+  function resetForm() {
+    setEditingId(null);
+    setName('');
+    setAmount('');
+    setDayOfMonth('1');
+    setAutoAddMonthly(true);
+    setMessage('');
+  }
+
+  function editDebitOrder(debitOrder) {
+    setEditingId(debitOrder.id);
+    setName(debitOrder.name);
+    setAmount(String(debitOrder.amount));
+    setDayOfMonth(String(debitOrder.dayOfMonth));
+    setAutoAddMonthly(debitOrder.autoAddMonthly);
+    setMessage('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (!name || !amount || !dayOfMonth) {
       return;
     }
 
-    onSave({
+    setIsBusy(true);
+    setMessage('');
+    const current = debitOrders.find((item) => item.id === editingId);
+    const payload = {
+      active: current?.active ?? true,
       amount: Number(amount),
       autoAddMonthly,
-      category: selectedProduct?.category || 'General',
+      category: selectedProduct?.category || current?.category || 'General',
       dayOfMonth: Number(dayOfMonth),
-      name,
-      tags: selectedProduct?.tags || ['monthly'],
-    });
-    setName('');
-    setAmount('');
-    setDayOfMonth('1');
-    setAutoAddMonthly(true);
+      name: name.trim(),
+      tags: selectedProduct?.tags || current?.tags || ['monthly'],
+    };
+    try {
+      if (editingId) await onUpdate({ id: editingId, ...payload });
+      else await onSave(payload);
+      resetForm();
+    } catch (error) {
+      setMessage(error?.message || 'Could not save this debit order.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function toggleActive(item) {
+    try {
+      await onUpdate({ ...item, active: !item.active });
+    } catch (error) {
+      setMessage(error?.message || 'Could not update this debit order.');
+    }
+  }
+
+  async function deleteDebitOrder(item) {
+    if (!window.confirm(`Delete “${item.name}”? Existing expenses will remain.`)) return;
+    try {
+      await onDelete(item.id);
+      if (editingId === item.id) resetForm();
+    } catch (error) {
+      setMessage(error?.message || 'Could not delete this debit order.');
+    }
   }
 
   return (
@@ -58,13 +107,13 @@ export default function DebitOrders({ debitOrders, onSave }) {
           <p className="eyebrow">Debit orders</p>
           <h2>Monthly commitments</h2>
         </div>
-        <span className="status-pill">{debitOrders.length} active</span>
+        <span className="status-pill">{debitOrders.filter((item) => item.active).length} active</span>
       </header>
 
       <section className="debit-grid">
         <form className="debit-form table-panel" onSubmit={handleSubmit}>
           <div className="panel-title">
-            <h3>Add debit order</h3>
+            <h3>{editingId ? 'Edit debit order' : 'Add debit order'}</h3>
             <Repeat size={20} />
           </div>
 
@@ -116,9 +165,14 @@ export default function DebitOrders({ debitOrders, onSave }) {
             <span>Auto add this debit order each month</span>
           </label>
 
-          <button className="primary-action" type="submit">
-            Save debit order
-          </button>
+          {message && <p className="form-message" role="alert">{message}</p>}
+
+          <div className="form-actions">
+            {editingId && <button className="secondary-action" type="button" onClick={resetForm}>Cancel</button>}
+            <button className="primary-action" type="submit" disabled={isBusy}>
+              {isBusy ? 'Saving…' : editingId ? 'Save changes' : 'Save debit order'}
+            </button>
+          </div>
         </form>
 
         <section className="table-panel">
@@ -139,14 +193,19 @@ export default function DebitOrders({ debitOrders, onSave }) {
                     <p>{formatCurrency(items.reduce((total, item) => total + Number(item.amount), 0))}</p>
                   </div>
                   {items.map((item) => (
-                    <div className="debit-order-row" key={item.id}>
+                    <div className={`debit-order-row ${item.active ? '' : 'paused'}`} key={item.id}>
                       <div>
                         <strong>{item.name}</strong>
-                        <span>Day {item.dayOfMonth}</span>
+                        <span>Day {item.dayOfMonth}{item.active ? '' : ' · Paused'}</span>
                       </div>
-                      <div>
+                      <div className="debit-order-details">
                         <p>{formatCurrency(item.amount)}</p>
                         {item.autoAddMonthly && <small>Auto monthly</small>}
+                        <div className="row-actions">
+                          <button type="button" onClick={() => editDebitOrder(item)}><Pencil size={15} /> Edit</button>
+                          <button type="button" onClick={() => toggleActive(item)}>{item.active ? <Pause size={15} /> : <Play size={15} />} {item.active ? 'Pause' : 'Resume'}</button>
+                          <button className="danger-text" type="button" onClick={() => deleteDebitOrder(item)}><Trash2 size={15} /> Delete</button>
+                        </div>
                       </div>
                     </div>
                   ))}

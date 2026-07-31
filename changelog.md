@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0
+
+- Added editable month-specific budgets with live remaining-spend calculations.
+- Added transaction editing, recategorisation, redating, and deletion.
+- Expanded Quick Add with an expense date, category selection, clearer feedback, and a labelled desktop action.
+- Added debit-order editing, pausing, resuming, and deletion.
+- Corrected automatic debit-order expenses to use the configured debit day, including shorter months.
+- Added signed-in settings with persistent light and dark theme controls.
+
 ## 1.0.8
 
 - Added Standard Bank `Payments` and `Deposits` column support for PDF and CSV statements.

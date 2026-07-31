@@ -32,6 +32,16 @@ function requireNonNegativeAmount(amount) {
   }
 }
 
+async function requireOwnedDocument(ctx, table, id, userId) {
+  const document = await ctx.db.get(id);
+
+  if (!document || document.userId !== userId) {
+    throw new ConvexError(`${table} was not found.`);
+  }
+
+  return document;
+}
+
 export const ensureDefaults = mutation({
   args: {
     monthStart: v.string(),
@@ -88,6 +98,44 @@ export const listTransactions = query({
   },
 });
 
+export const getBudgetMonth = query({
+  args: { monthStart: v.string() },
+  handler: async (ctx, { monthStart }) => {
+    const userId = await requireUserId(ctx);
+    const budgetMonth = await ctx.db
+      .query("budgetMonths")
+      .withIndex("by_user_and_month", (q) =>
+        q.eq("userId", userId).eq("monthStart", monthStart),
+      )
+      .unique();
+
+    return budgetMonth
+      ? { amount: budgetMonth.budgetAmount, id: budgetMonth._id, monthStart }
+      : { amount: 0, id: null, monthStart };
+  },
+});
+
+export const setMonthlyBudget = mutation({
+  args: { amount: v.number(), monthStart: v.string() },
+  handler: async (ctx, { amount, monthStart }) => {
+    const userId = await requireUserId(ctx);
+    requireNonNegativeAmount(amount);
+    const existing = await ctx.db
+      .query("budgetMonths")
+      .withIndex("by_user_and_month", (q) =>
+        q.eq("userId", userId).eq("monthStart", monthStart),
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { budgetAmount: amount });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("budgetMonths", { budgetAmount: amount, monthStart, userId });
+  },
+});
+
 export const addTransaction = mutation({
   args: {
     amount: v.number(),
@@ -104,6 +152,32 @@ export const addTransaction = mutation({
       ...transaction,
       userId,
     });
+  },
+});
+
+export const updateTransaction = mutation({
+  args: {
+    id: v.id("transactions"),
+    amount: v.number(),
+    category: v.string(),
+    name: v.string(),
+    tags: v.array(v.string()),
+    transactionDate: v.string(),
+  },
+  handler: async (ctx, { id, ...transaction }) => {
+    const userId = await requireUserId(ctx);
+    await requireOwnedDocument(ctx, "Transaction", id, userId);
+    requireNonNegativeAmount(transaction.amount);
+    await ctx.db.patch(id, transaction);
+  },
+});
+
+export const deleteTransaction = mutation({
+  args: { id: v.id("transactions") },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUserId(ctx);
+    await requireOwnedDocument(ctx, "Transaction", id, userId);
+    await ctx.db.delete(id);
   },
 });
 
@@ -163,6 +237,7 @@ export const listDebitOrders = query({
       .collect();
 
     return debitOrders.map((debitOrder) => ({
+      active: debitOrder.active !== false,
       amount: debitOrder.amount,
       autoAddMonthly: debitOrder.autoAddMonthly,
       category: debitOrder.category,
@@ -193,8 +268,40 @@ export const addDebitOrder = mutation({
 
     return await ctx.db.insert("debitOrders", {
       ...debitOrder,
+      active: true,
       userId,
     });
+  },
+});
+
+export const updateDebitOrder = mutation({
+  args: {
+    id: v.id("debitOrders"),
+    active: v.boolean(),
+    amount: v.number(),
+    autoAddMonthly: v.boolean(),
+    category: v.string(),
+    dayOfMonth: v.number(),
+    name: v.string(),
+    tags: v.array(v.string()),
+  },
+  handler: async (ctx, { id, ...debitOrder }) => {
+    const userId = await requireUserId(ctx);
+    await requireOwnedDocument(ctx, "Debit order", id, userId);
+    requireNonNegativeAmount(debitOrder.amount);
+    if (!Number.isInteger(debitOrder.dayOfMonth) || debitOrder.dayOfMonth < 1 || debitOrder.dayOfMonth > 31) {
+      throw new ConvexError("Debit day must be between 1 and 31.");
+    }
+    await ctx.db.patch(id, debitOrder);
+  },
+});
+
+export const deleteDebitOrder = mutation({
+  args: { id: v.id("debitOrders") },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUserId(ctx);
+    await requireOwnedDocument(ctx, "Debit order", id, userId);
+    await ctx.db.delete(id);
   },
 });
 
@@ -212,8 +319,18 @@ export const syncMonthlyDebitOrders = mutation({
 
     let added = 0;
 
+    const currentDay = Number(transactionDate.slice(8, 10));
+    const [year, month] = currentMonth.split("-").map(Number);
+    const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
     for (const debitOrder of debitOrders) {
-      if (!debitOrder.autoAddMonthly || debitOrder.lastAutoAddedMonth === currentMonth) {
+      const scheduledDay = Math.min(debitOrder.dayOfMonth, lastDayOfMonth);
+      if (
+        debitOrder.active === false
+        || !debitOrder.autoAddMonthly
+        || debitOrder.lastAutoAddedMonth === currentMonth
+        || currentDay < scheduledDay
+      ) {
         continue;
       }
 
@@ -223,7 +340,7 @@ export const syncMonthlyDebitOrders = mutation({
         debitOrderId: debitOrder._id,
         name: debitOrder.name,
         tags: debitOrder.tags,
-        transactionDate,
+        transactionDate: `${currentMonth}-${String(scheduledDay).padStart(2, "0")}`,
         userId,
       });
       await ctx.db.patch(debitOrder._id, { lastAutoAddedMonth: currentMonth });

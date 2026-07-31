@@ -7,6 +7,7 @@ import {
   HeartPulse,
   Home,
   PiggyBank,
+  Pencil,
   ReceiptText,
   ShieldCheck,
   ShoppingBag,
@@ -16,6 +17,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import TransactionEditor from './TransactionEditor.jsx';
 
 const productIcons = {
   Clothing: ShoppingBag,
@@ -71,9 +73,10 @@ function groupProducts(transactions) {
   return Object.values(grouped).sort((a, b) => b.total - a.total);
 }
 
-export default function Products({ transactions }) {
+export default function Products({ onTransactionDelete, onTransactionUpdate, transactions }) {
   const products = useMemo(() => groupProducts(transactions), [transactions]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const largestTotal = Math.max(...products.map((product) => product.total), 1);
 
   return (
@@ -170,13 +173,29 @@ export default function Products({ transactions }) {
                     <strong>{formatDate(entry.date)}</strong>
                     <span>{entry.category}</span>
                   </div>
-                  <p>{formatCurrency(Number(entry.amount))}</p>
+                  <div className="modal-entry-actions">
+                    <p>{formatCurrency(Number(entry.amount))}</p>
+                    <button type="button" onClick={() => setSelectedTransaction(entry)}><Pencil size={15} /> Edit</button>
+                  </div>
                 </div>
               ))}
             </div>
           </section>
         </div>
       )}
+
+      <TransactionEditor
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+        onDelete={async (id) => {
+          await onTransactionDelete(id);
+          setSelectedProduct(null);
+        }}
+        onSave={async (transaction) => {
+          await onTransactionUpdate(transaction);
+          setSelectedProduct(null);
+        }}
+      />
     </div>
   );
 }

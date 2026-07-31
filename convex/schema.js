@@ -48,6 +48,7 @@ export default defineSchema({
     amount: v.number(),
     dayOfMonth: v.number(),
     autoAddMonthly: v.boolean(),
+    active: v.optional(v.boolean()),
     lastAutoAddedMonth: v.optional(v.string()),
     legacyId: v.optional(v.string()),
   })

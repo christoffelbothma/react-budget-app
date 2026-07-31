@@ -9,6 +9,9 @@ A React budget tracker backed by Convex.
 - South African-friendly merchant auto-categorisation with a review step
 - Duplicate-safe imports; credits are excluded from expense tracking
 - Interactive category, six-month trend and weekly spending charts
+- Editable monthly budgets and full transaction management
+- Managed recurring debit orders with pause and resume controls
+- Persistent light and dark themes while signed in
 - Email/password authentication and realtime per-user data through Convex
 
 ## Run locally

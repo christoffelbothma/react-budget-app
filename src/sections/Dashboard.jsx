@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import {
   Area,
   AreaChart,
@@ -13,8 +14,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import TransactionEditor from './TransactionEditor.jsx';
 
-const monthlyBudget = 0;
 const CHART_COLORS = ['#0f6b58', '#e7b45f', '#365f91', '#9b3d27', '#8b5cf6', '#d97706', '#16a34a', '#64748b'];
 
 function formatCurrency(value, compact = false) {
@@ -48,9 +49,13 @@ function EmptyState({ message }) {
   );
 }
 
-export default function Dashboard({ isLoading, transactions }) {
+export default function Dashboard({ isLoading, monthlyBudget, onBudgetSave, onTransactionDelete, onTransactionUpdate, transactions }) {
   const [range, setRange] = useState('3months');
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetAmount, setBudgetAmount] = useState(String(monthlyBudget));
+  const [budgetBusy, setBudgetBusy] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const rangeTransactions = useMemo(() => {
     if (range === 'all') return transactions;
     const cutoff = range === 'month' ? startOfMonth() : startOfMonth(2);
@@ -106,6 +111,17 @@ export default function Dashboard({ isLoading, transactions }) {
     }));
   }, [currentMonthTransactions]);
 
+  async function handleBudgetSubmit(event) {
+    event.preventDefault();
+    setBudgetBusy(true);
+    try {
+      await onBudgetSave(Number(budgetAmount));
+      setEditingBudget(false);
+    } finally {
+      setBudgetBusy(false);
+    }
+  }
+
   return (
     <div className="dashboard-screen">
       <header className="screen-header">
@@ -117,7 +133,21 @@ export default function Dashboard({ isLoading, transactions }) {
       </header>
 
       <section className="metric-grid" aria-label="Budget summary">
-        <article className="metric-tile"><span>Monthly budget</span><strong>{formatCurrency(monthlyBudget)}</strong></article>
+        <article className="metric-tile budget-tile">
+          <span>Monthly budget</span>
+          {editingBudget ? (
+            <form className="budget-editor" onSubmit={handleBudgetSubmit}>
+              <input aria-label="Monthly budget amount" type="number" min="0" step="0.01" value={budgetAmount} onChange={(event) => setBudgetAmount(event.target.value)} autoFocus />
+              <button type="submit" disabled={budgetBusy}>{budgetBusy ? 'Saving…' : 'Save'}</button>
+              <button type="button" onClick={() => { setBudgetAmount(String(monthlyBudget)); setEditingBudget(false); }}>Cancel</button>
+            </form>
+          ) : (
+            <div className="metric-value-row">
+              <strong>{formatCurrency(monthlyBudget)}</strong>
+              <button type="button" onClick={() => { setBudgetAmount(String(monthlyBudget)); setEditingBudget(true); }} aria-label="Edit monthly budget"><Pencil size={17} /></button>
+            </div>
+          )}
+        </article>
         <article className="metric-tile"><span>Spent this month</span><strong>{formatCurrency(currentSpent)}</strong></article>
         <article className="metric-tile"><span>Still available</span><strong className={remaining < 0 ? 'negative-value' : ''}>{formatCurrency(remaining)}</strong></article>
       </section>
@@ -224,13 +254,20 @@ export default function Dashboard({ isLoading, transactions }) {
         </div>
         <div className="transaction-list">
           {visibleTransactions.length ? visibleTransactions.slice(0, 20).map((transaction) => (
-            <div className="transaction-row" key={transaction.id}>
+            <div className="transaction-row manageable-row" key={transaction.id}>
               <div><strong>{transaction.name}</strong><span>{transaction.category} · {transaction.date}{transaction.source === 'bank-import' ? ' · Bank import' : ''}</span></div>
-              <p>{formatCurrency(Number(transaction.amount))}</p>
+              <div className="transaction-actions"><p>{formatCurrency(Number(transaction.amount))}</p><button type="button" onClick={() => setSelectedTransaction(transaction)} aria-label={`Edit ${transaction.name}`}><Pencil size={16} /> Edit</button></div>
             </div>
           )) : <EmptyState message="No expenses match this view." />}
         </div>
       </section>
+
+      <TransactionEditor
+        transaction={selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+        onDelete={onTransactionDelete}
+        onSave={onTransactionUpdate}
+      />
     </div>
   );
 }
